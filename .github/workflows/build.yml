@@ -36,15 +36,22 @@ jobs:
           path: ./build/*.*
           retention-days: 7
       - name: Create release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && github.repository == 'sionta/mixplorer'
         shell: pwsh
         run: |
-          $tag = '${{ github.ref_name }}'
           $files = resolve-path ./build/*.* -relative -ea:0
-          if (!$files) { 'cannot find files on ./build'; exit 1 }
-          ./scripts/changelog.ps1 -n -o ./changes.md
-          if (test-path ./changes.md) {
-            gh release create $tag $files -F ./changes.md --verify-tag
+          if ($files) {
+            $tag = "${{ github.ref_name }}"
+            $flags = $tag, $files, --verify-tag
+            $pattern = "^##.[$($tag -replace '^v', '')\]"
+            $changelog = get-content ./changelog.md -ea:0
+            if ($changelog -match $pattern) {
+              ./scripts/changelog.ps1 -n | out-file ./changes.md
+              gh release create $flags -F ./changes.md
+            } else {
+              gh release create $flags --generate-notes
+            }
           } else {
-            gh release create $tag $files --verify-tag
+            "cannot find files on ./build"; exit 1
           }
+          exit $LASTEXITCODE
