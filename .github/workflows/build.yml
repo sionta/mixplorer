@@ -44,7 +44,7 @@ jobs:
           if ($files) {
             $tag = "${{ github.ref_name }}"
             $flags = $tag, $files, '--verify-tag'
-            $pattern = "^##.[$($tag -replace '^v', '')\]"
+            $pattern = "^##.\[$($tag -replace '^v', '')\]"
             $changelog = get-content ./changelog.md -ea:0
             if ($changelog -match $pattern) {
               ./scripts/changelog.ps1 -n | out-file ./changes.md
