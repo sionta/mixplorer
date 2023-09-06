@@ -8,6 +8,7 @@ on:
       - 'res/**'
       - 'scripts/**'
       - 'screenshot.png'
+      - '.github/**/**.yml'
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
@@ -42,7 +43,7 @@ jobs:
           $files = resolve-path ./build/*.* -relative -ea:0
           if ($files) {
             $tag = "${{ github.ref_name }}"
-            $flags = $tag, $files, --verify-tag
+            $flags = $tag, $files, '--verify-tag'
             $pattern = "^##.[$($tag -replace '^v', '')\]"
             $changelog = get-content ./changelog.md -ea:0
             if ($changelog -match $pattern) {
