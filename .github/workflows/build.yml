@@ -42,13 +42,14 @@ jobs:
         run: |
           $files = resolve-path ./build/*.* -relative -ea:0
           if ($files) {
-            $tagname = "${{ github.ref_name }}"
+            $tag = "${{ github.ref_name }}"
+            $version = $tag -replace '^v', ''
             $changelog = get-content ./changelog.md -ea:0
-            if ($changelog -match "^##.\[$($tagname -replace '^v', '')\]") {
+            if ($changelog -match "^##\s\[$version\]") {
               ./scripts/changelog.ps1 -n | out-file ./changes.md
-              gh release create $tagname $files --verify-tag -F ./changes.md
+              gh release create $tag $files -F ./changes.md --verify-tag
             } else {
-              gh release create $tagname $files --verify-tag --generate-notes
+              gh release create $tag $files --generate-notes --verify-tag
             }
           } else {
             "cannot find files on ./build"; exit 1
