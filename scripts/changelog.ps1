@@ -1,75 +1,44 @@
-[CmdletBinding(DefaultParameterSetName = 'Header')]
+[CmdletBinding()]
 param (
-    [Parameter(ParameterSetName = 'Header')]
     [Alias('d')][int]$Depth = 0,
-    [Parameter(ParameterSetName = 'Header')]
-    [Alias('n')][switch]$NoHeader,
-    [Parameter(ParameterSetName = 'Example')]
-    [Alias('e')][switch]$Example
+    [Alias('n')][switch]$NoHeader
+
 )
-
-function example_changelog {
-    'Add changes to CHANGELOG.md. For example:'; ''
-    Write-Host -ForegroundColor Cyan @'
-## [2.0.0] - 2020-02-20
-
-_If you are upgrading: please see [`UPGRADING.md`](UPGRADING.md)._
-
-### Removed
-
-- **Breaking:** remove `write()` method from public API (`01e3a64`)
-
-[2.0.0]: <https://github.com/owner/repo/tree/v2.0.0>
-
-## [1.0.0] - 2010-01-10
-
-_First release._
-
-[1.0.0]: <https://github.com/owner/repo/tree/v1.0.0>
-'@
-    return
-}
-
-if ($Example) { return example_changelog }
-
 $srcFile = [System.IO.Path]::GetFullPath("$PSScriptRoot/../CHANGELOG.md")
 if (!([System.IO.File]::Exists($srcFile))) {
     "File could not be found '$srcFile'."
-    example_changelog
     exit 1
 }
-
-function latest_changelog {
-    [System.Text.RegularExpressions.Regex]::Matches(
-        [System.IO.File]::ReadAllText($srcFile),
-        [System.String]::new('^##[^#\n]+([\W\w]*?)\[([\d.]+)\]\:.+'),
-        [System.Text.RegularExpressions.RegexOptions]::Multiline
-    ).Value[$Depth]
-    return
-}
-
-function noheader_changelog {
-    $f = [System.IO.Path]::GetTempFileName()
-    [System.IO.File]::WriteAllText($f, $(latest_changelog))
-    $l = [System.IO.File]::ReadAllLines($f)
-    [System.IO.File]::Delete($f)
-    $h = $l -match '^##\s\[([\d.]+)\]\s-\s\d{4}-\d{2}-\d{2}'
-    $e = $l -match '\[([\d.]+)\]\:'
-    $w = [System.Collections.Generic.List[string]]::new()
-    foreach ($i in $l) {
-        if ($i.Contains($h)) { continue };
-        if ($i.Contains($e)) { break };
-        $w.Add($i)
+$results = [System.Text.RegularExpressions.Regex]::Matches(
+    [System.IO.File]::ReadAllText($srcFile),
+    [System.String]::new('^##[^#\n]+([\W\w]*?)(^\[[\d.]+\]\:.+)'),
+    [System.Text.RegularExpressions.RegexOptions]::Multiline
+).Value[$Depth]
+# $results = [System.Text.RegularExpressions.Regex]::Match(
+#     [System.IO.File]::ReadAllText($srcFile),
+#     [System.String]::new('^##[^#\n]+([\W\w]*?)^##[^#\n]+'),
+#     [System.Text.RegularExpressions.RegexOptions]::Multiline
+# )
+if ($results) {
+    $temp = [System.IO.Path]::GetTempFileName()
+    [System.IO.File]::WriteAllText($temp, $results)
+    $lines = [System.IO.File]::ReadAllLines($temp)
+    $head = $lines -match '^##\s\[([\d.]+)\]\s-\s\d{4}-\d{2}-\d{2}'
+    $foot = $lines -match '\[([\d.]+)\]\:'
+    $words = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in $lines) {
+        if ($line.Contains($head[1])) { break }
+        if ($line.Contains($foot[0]) -and $NoHeader) { break }
+        if ($line.Contains($head[0]) -and $NoHeader) { continue }
+        $words.Add($line)
     }
-    if ($w[0].Length -eq 0) { $w.RemoveAt(0) }
-    if ($w[-1].Length -eq 0) { $w.RemoveAt($w.Count - 1) }
-    return $w
-}
-
-if ($NoHeader) {
-    return noheader_changelog
-} else {
-    return latest_changelog
+    if ($words[-1].Length -eq 0) { $words.RemoveAt($words.Count - 1) }
+    if ($NoHeader) {
+        if ($words[0].Contains($head[0])) { $words.RemoveAt(0) }
+        if ($words[0].Length -eq 0) { $words.RemoveAt(0) }
+    }
+    [System.IO.File]::Delete($temp)
+    return $words
 }
 
 # OLDER
