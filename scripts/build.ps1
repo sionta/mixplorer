@@ -1,4 +1,3 @@
-#!/usr/bin/pwsh -c
 <#
 .SYNOPSIS
     Build Dracula theme.
@@ -21,33 +20,33 @@ param (
     [Alias('f')][switch]$Force
 )
 begin {
-    # [System.Console]::WriteLine('Initializing...')
-    [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/../")
-    $ROOT_PATH = [System.IO.Directory]::GetCurrentDirectory()
+    [System.Console]::WriteLine('Initializing...')
+    [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
+    $ROOT_PATH = [System.Environment]::CurrentDirectory
     if ($Accent -eq 'Purple') {
-        $titleName = 'Dracula Purple'; $accentHex = '#BD93F9'
+        $accentHex = '#BD93F9'; $titleName = 'Dracula Purple'
     } else {
-        $titleName = 'Dracula'; $accentHex = '#FF79C6'
+        $accentHex = '#FF79C6'; $titleName = 'Dracula';
     }
     if ($Name) {
         $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
     } else {
         $BASE_NAME = 'dracula-' + $Accent.ToLower()
     }
-    $templates = [System.Collections.Hashtable]@{
-        properties = [System.Collections.Hashtable]::new();
-        fonts      = [System.Collections.Hashtable]::new();
-        icons      = [System.Collections.Hashtable]::new();
-    }
+    $templates = [System.Collections.Hashtable]::new()
     $SOURCE_ROOT = [System.IO.Path]::Combine($ROOT_PATH, 'res')
-    # validate configuration files such as ConvertFrom-StringData
+    # This will validate the templates.txt file. This method is
+    # the same as using the ConvertFrom-StringData cmdlets.
     $fileTemplate = [System.IO.Path]::Combine($SOURCE_ROOT, 'templates.txt')
     if ([System.IO.File]::Exists($fileTemplate)) {
+        $templates.Add('properties', [System.Collections.Hashtable]::new())
+        $templates.Add('fonts', [System.Collections.Hashtable]::new())
         foreach ($line in [System.IO.File]::ReadAllLines($fileTemplate)) {
-            $line = $line.Trim().Trim('"').Trim("'")
-            if (!$line.StartsWith('#') -and !$line.Length -eq 0) {
-                [string]$value = $line.Split('=')[1].Trim().Trim('"').Trim("'")
-                [string]$name = $line.Split('=')[0].Trim().Trim('"').Trim("'")
+            [string]$line = $line.Trim().Trim(@('"', "'"))
+            if ($line) {
+                if ($line[0] -eq '#') { continue }
+                [string]$value = $line.Split('=')[1].Trim().Trim(@('"', "'"))
+                [string]$name = $line.Split('=')[0].Trim().Trim(@('"', "'"))
                 switch ($name) {
                     'font_primary' { $templates.fonts.Add($name, $value) }
                     'font_secondary' { $templates.fonts.Add($name, $value) }
@@ -55,26 +54,6 @@ begin {
                     'font_popup' { $templates.fonts.Add($name, $value) }
                     'font_editor' { $templates.fonts.Add($name, $value) }
                     'font_hex' { $templates.fonts.Add($name, $value) }
-                    'title' { $templates.properties.Add($name, $titleName) }
-                    'highlight_bar_action_buttons' { $templates.properties.Add($name, $accentHex) }
-                    'highlight_bar_main_buttons' { $templates.properties.Add($name, $accentHex) }
-                    'highlight_bar_tab_buttons' { $templates.properties.Add($name, $accentHex) }
-                    'highlight_bar_tool_buttons' { $templates.properties.Add($name, $accentHex) }
-                    'highlight_visited_folder' { $templates.properties.Add($name, $accentHex) }
-                    'text_bar_tab_selected' { $templates.properties.Add($name, $accentHex) }
-                    'text_button_inverse' { $templates.properties.Add($name, $accentHex) }
-                    'text_edit_selection_foreground' { $templates.properties.Add($name, $accentHex) }
-                    'text_grid_primary_inverse' { $templates.properties.Add($name, $accentHex) }
-                    'text_link_pressed' { $templates.properties.Add($name, $accentHex) }
-                    'text_popup_header' { $templates.properties.Add($name, $accentHex) }
-                    'text_popup_primary_inverse' { $templates.properties.Add($name, $accentHex) }
-                    'text_popup_secondary_inverse' { $templates.properties.Add($name, $accentHex) }
-                    'tint_bar_tab_icons' { $templates.properties.Add($name, $accentHex) }
-                    'tint_page_separator' { $templates.properties.Add($name, $accentHex) }
-                    'tint_popup_icons' { $templates.properties.Add($name, $accentHex) }
-                    'tint_progress_bar' { $templates.properties.Add($name, $accentHex) }
-                    'tint_scroll_thumbs' { $templates.properties.Add($name, $accentHex) }
-                    'tint_tab_indicator_selected' { $templates.properties.Add($name, $accentHex) }
                     Default { $templates.properties.Add($name, $value) }
                 }
             }
@@ -83,9 +62,23 @@ begin {
         [System.Console]::WriteLine("Cannot found: $fileTemplate.")
         exit 1
     }
+    if ($Accent -eq 'Purple') {
+        $templates.properties['title'] = $titleName; @(
+            'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
+            'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
+            'highlight_visited_folder', 'text_bar_tab_selected',
+            'text_button_inverse', 'text_edit_selection_foreground',
+            'text_grid_primary_inverse', 'text_link_pressed',
+            'text_popup_header', 'text_popup_primary_inverse',
+            'text_popup_secondary_inverse', 'tint_bar_tab_icons',
+            'tint_page_separator', 'tint_popup_icons', 'tint_progress_bar',
+            'tint_scroll_thumbs', 'tint_tab_indicator_selected'
+        ).ForEach( { $templates.properties["$_"] = "$accentHex" } )
+    }
     $sourceIconDir = [System.IO.Path]::Combine($SOURCE_ROOT, 'icons')
     $iconConfigFile = [System.IO.Path]::Combine($SOURCE_ROOT, 'icons.csv')
     if ([System.IO.File]::Exists($iconConfigFile)) {
+        $templates.Add('icons', [System.Collections.Hashtable]::new())
         $read = [System.IO.File]::ReadAllText($iconConfigFile)
         $data = ConvertFrom-Csv -InputObject $read -Delimiter ','
         for ($i = 0; $i -lt $data.Count; $i++) {
@@ -102,16 +95,16 @@ begin {
         if ([System.IO.File]::Exists($rsvg_convert)) {
             $addPath = [System.IO.Path]::GetDirectoryName($rsvg_convert)
             $oldPath = [System.Environment]::GetEnvironmentVariable('Path')
-            $newpath = ($oldPath.Split(';') -notlike $addPath) + $addPath -join ';'
-            [System.Environment]::SetEnvironmentVariable('Path', $newpath)
+            $newPath = ($oldPath.Split(';') -notlike $addPath) + $addPath -join ';'
+            [System.Environment]::SetEnvironmentVariable('Path', $newPath)
         }
     }
     $svgTool = ('rsvg-convert', 'cairosvg').ForEach({ if (Get-Command -Name $_ -ea:0) { $_ } })[0]
-    if (-not($svgTool)) {
+    if ($svgTool) {
+        New-Alias -Name 'svg2png' -Value "$svgTool" -Description 'Convert svg to png' -Force
+    } else {
         [System.Console]::WriteLine("Need to install 'rsvg-convert' or 'cairosvg'.")
         exit 1
-    } else {
-        New-Alias -Name 'svg2png' -Value "$svgTool" -Description 'Convert svg to png'
     }
 }
 process {
@@ -169,20 +162,19 @@ process {
         $inputSvgFile = [System.IO.Path]::Combine($sourceIconDir, "$icon.svg")
         $outputPngFile = [System.IO.Path]::Combine($buildIconDir, "$icon.png")
         if ([System.IO.File]::Exists($inputSvgFile)) {
-            try {
+            if ($inputSvgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
+                $default_folder_icon = [System.IO.File]::ReadAllText($inputSvgFile)
+                $purple_folder_icon = $default_folder_icon -replace '\"#FF79C6\"', '"#BD93F9"'
+                [System.IO.File]::WriteAllText($inputSvgFile, $purple_folder_icon)
+            }
+            $resizes = $templates.icons[$icon]
+            $options = "$inputSvgFile", '--output', "$outputPngFile"
+            if ($resizes) { $options += '--width', "$resizes", '--height', "$resizes" }
+            [System.Diagnostics.Process]::Start($svgTool, $options).StandardOutput
+            # svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
+            if ($default_folder_icon) {
+                [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
                 $default_folder_icon = $null; $purple_folder_icon = $null
-                if ($inputSvgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
-                    $default_folder_icon = [System.IO.File]::ReadAllText($inputSvgFile)
-                    $purple_folder_icon = $default_folder_icon -replace '\"#FF79C6\"', '"#BD93F9"'
-                    [System.IO.File]::WriteAllText($inputSvgFile, $purple_folder_icon)
-                }
-                $outputPngSize = $templates.icons[$icon]
-                if ($outputPngSize) { $resizes = '--width', "$outputPngSize", '--height', "$outputPngSize" }
-                svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
-            } finally {
-                if ($default_folder_icon) {
-                    [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
-                }
             }
         } else {
             [System.Console]::WriteLine("Cannot found: $inputSvgFile.")
@@ -191,7 +183,7 @@ process {
     try {
         [System.Console]::WriteLine('Generating properties file...')
         $buildPropXml = [System.IO.Path]::Combine($buildNameDir, 'properties.xml')
-        $xmldoc = New-Object -TypeName System.Xml.XmlDocument
+        $xmldoc = [System.Xml.XmlDocument]::new()
         $xmldec = $xmldoc.CreateXmlDeclaration('1.0', 'utf-8', $null)
         $xmldoc.AppendChild($xmldec) | Out-Null
         $elroot = $xmldoc.CreateElement('properties')

@@ -6,7 +6,7 @@
 
 ## Icons
 
-- [Iconsax](https://github.com/glenthemes/iconsax)([LICENSE](https://iconsax.io/#license))
+- [Iconsax](https://github.com/glenthemes/iconsax) ([LICENSE](https://iconsax.io/#license))
 - [Tabler Icons](https://github.com/tabler/tabler-icons) ([MIT](https://github.com/tabler/tabler-icons/blob/master/LICENSE))
 - [SVG Repo](https://www.svgrepo.com) ([LICENSE](https://www.svgrepo.com/page/licensing/))
 
