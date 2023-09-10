@@ -37,10 +37,7 @@ jobs:
           path: ./build/*.*
           retention-days: 7
       - name: Create release
-        env:
-          isTagname: startsWith(github.ref, 'refs/tags/')
-          isDracula: github.repository == 'sionta/mixplorer'
-        if: env.isTagname && env.isDracula
+        if: startsWith(github.ref, 'refs/tags/') && github.repository == 'dracula/mixplorer'
         shell: pwsh
         run: |
           $files = resolve-path ./build/*.* -relative -ea:0
