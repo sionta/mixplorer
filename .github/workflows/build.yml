@@ -1,24 +1,18 @@
-name: build
+name: Build Packages
 
 on:
   push:
-    paths:
-      - '**.md'
-      - 'bin/**'
-      - 'res/**'
-      - 'scripts/**'
-      - 'screenshot.png'
-      - '.github/**/**.yml'
+    branches:
+      - 'main'
+      - 'master'
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch:
-
-permissions: write-all
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - 'v*'
 
 jobs:
   build-release:
+    permissions: write-all
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
