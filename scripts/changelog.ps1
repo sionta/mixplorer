@@ -1,15 +1,41 @@
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'stdout')]
 param (
+    [Parameter(ParameterSetName = 'stdout')]
     [Alias('i')][int]$Index = 0,
-    [Alias('n')][switch]$NoHeader
+    [Parameter(ParameterSetName = 'stdout')]
+    [Alias('n')][switch]$NoHeader,
+    [Parameter(ParameterSetName = 'example')]
+    [Alias('e')][switch]$Example
 )
 begin {
+    $examples = @'
+## [1.3.0] - 2023-09-03
+
+### Added
+
+- New `Purple` accent color.
+- New filled icon in bookmarks.
+
+### Fixed
+
+<!-- is comments -->
+- Button icons oversized.
+
+[1.3.0]: <https://github.com/dracula/mixplorer/compare/v1.2.0...v1.3.0>
+
+## [1.0.0] - 2021-10-22
+
+_Initial commits._
+
+[1.0.0]: <https://github.com/dracula/mixplorer/commits/v1.0.0>
+'@
+    if ($Example) { return $examples }
     # [System.Console]::InputEncoding = [System.Console]::OutputEncoding = $OutputEncoding = [System.Text.UTF8Encoding]::new()
     $srcFile = [System.IO.Path]::GetFullPath("$PSScriptRoot/../CHANGELOG.md")
     if ([System.IO.File]::Exists($srcFile)) {
         $results = [System.Text.RegularExpressions.Regex]::Matches(
             [System.IO.File]::ReadAllText($srcFile),
-            [System.String]::new('^##[^#\n]+([\W\w]*?)^(\[\d.+\]\:).*'),
+            [string]'^##\s\[\d.+\][\n\W\w]*?\[[\d.]+\]\:.*[^\n]',
             [System.Text.RegularExpressions.RegexOptions]::Multiline
         ).Value[$Index]
     } else {
@@ -22,11 +48,11 @@ process {
         [System.IO.File]::WriteAllText($temp, $results)
         $lines = [System.IO.File]::ReadAllLines($temp)
         [System.IO.File]::Delete($temp)
-        $lines = $lines -notmatch '\<\!--(.|\n)*?--\>'  # <!-- comments -->
-        $head = $lines -match '^##\s\[([\d.]+)\]'       # ## [semver] - yyyy-mm-dd
-        $foot = $lines -match '^\[([\d.]+)\]\:'         # [semver]: <url>
-        if ($head -and $foot) {
-            $words = [System.Collections.Generic.List[string]]::new()
+        $lines = $lines -notmatch '\<\!-[\W\w]*?-\>' # <!-- comments -->
+        $head = $lines -match '^##\s\[([\d.]+)\]'    # ## [semver] - yyyy-mm-dd
+        $foot = $lines -match '^\[([\d.]+)\]\:'      # [semver]: <url>
+        if ($head[0] -and $foot[0]) {
+            $words = [System.Collections.Generic.List[string[]]]::new()
             foreach ($line in $lines) {
                 if ($line -eq $head[1]) { break }
                 if ($line -eq $foot[0] -and $NoHeader) { break }
@@ -34,27 +60,8 @@ process {
                 $words.Add($line)
             }
         } else {
-            "Incorrect changelog syntax, for example:"
-            @'
-## [1.3.0] - 2023-09-03
-
-### Added
-
-- New `Purple` accent color.
-- New filled icon in bookmarks.
-
-### Fixed
-
-- Button icons oversized.
-
-[1.3.0]: <https://github.com/dracula/mixplorer/compare/v1.2.0...v1.3.0>
-
-## [1.0.0] - 2021-10-22
-
-_Initial commits._
-
-[1.0.0]: <https://github.com/dracula/mixplorer/commits/v1.0.0>
-'@
+            "Incorrect syntax, for example:"
+            $examples
         }
     }
 }

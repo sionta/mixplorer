@@ -100,9 +100,7 @@ begin {
         }
     }
     $svgTool = ('rsvg-convert', 'cairosvg').ForEach({ if (Get-Command -Name $_ -ea:0) { $_ } })[0]
-    if ($svgTool) {
-        New-Alias -Name 'svg2png' -Value "$svgTool" -Description 'Convert svg to png' -Force
-    } else {
+    if (-not $svgTool) {
         [System.Console]::WriteLine("Need to install 'rsvg-convert' or 'cairosvg'.")
         exit 1
     }
@@ -171,7 +169,6 @@ process {
             $options = "$inputSvgFile", '--output', "$outputPngFile"
             if ($resizes) { $options += '--width', "$resizes", '--height', "$resizes" }
             [System.Diagnostics.Process]::Start($svgTool, $options).StandardOutput
-            # svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
             if ($default_folder_icon) {
                 [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
                 $default_folder_icon = $null; $purple_folder_icon = $null
