@@ -7,15 +7,14 @@ on:
     branches:
       - 'master'
 
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build package
         shell: pwsh
         run: |
@@ -34,6 +33,7 @@ jobs:
         run: |
           $files = resolve-path ./build/*.* -relative -ea:0
           if ($files) {
+            [string]'${{ env.GH_TOKEN }}' | gh auth login --with-token
             ./scripts/changelog.ps1 -noheader | out-file ./changes.md
             gh release create ${{ github.ref_name }} $files -F ./changes.md --generate-notes --verify-tag
           } else {
