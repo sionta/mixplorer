@@ -18,11 +18,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Build package
-        shell: pwsh
         run: |
           sudo apt-get install -y librsvg2-bin
-          ./scripts/build.ps1 -accent pink -force
-          ./scripts/build.ps1 -accent purple -force
+          pwsh -c try { ./scripts/build.ps1 -a pink -f } catch { throw $_; exit $lastexitcode }
+          pwsh -c try { ./scripts/build.ps1 -a purple -f } catch { throw $_; exit $lastexitcode }
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
