@@ -99,7 +99,7 @@ begin {
             [System.Environment]::SetEnvironmentVariable('Path', $newPath)
         }
     }
-    $svgTool = ('rsvg-convert', 'cairosvg').ForEach({ if (Get-Command -Name $_ -ea:0) { $_ } })[0]
+    $svgTool = $('rsvg-convert', 'cairosvg').ForEach({ Get-Command -Name $_ -ea:0 })[0]
     if (-not $svgTool) {
         [System.Console]::WriteLine("Need to install 'rsvg-convert' or 'cairosvg'.")
         exit 1
