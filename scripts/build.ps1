@@ -181,7 +181,7 @@ process {
         [System.Console]::WriteLine('Generating properties file...')
         $buildPropXml = [System.IO.Path]::Combine($buildNameDir, 'properties.xml')
         $xmldoc = [System.Xml.XmlDocument]::new()
-        $xmldec = $xmldoc.CreateXmlDeclaration('1.0', 'utf-8', $null)
+        $xmldoc.CreateXmlDeclaration('1.0', 'utf-8', $null) | Out-Null
         $xmldoc.AppendChild($xmldec) | Out-Null
         $elroot = $xmldoc.CreateElement('properties')
         $xmldoc.AppendChild($elroot) | Out-Null
