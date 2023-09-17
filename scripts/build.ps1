@@ -43,8 +43,7 @@ begin {
         $templates.Add('fonts', [System.Collections.Hashtable]::new())
         foreach ($line in [System.IO.File]::ReadAllLines($fileTemplate)) {
             [string]$line = $line.Trim().Trim(@('"', "'"))
-            if ($line) {
-                if ($line[0] -eq '#') { continue }
+            if ($line -and $line[0] -ne '#') {
                 [string]$value = $line.Split('=')[1].Trim().Trim(@('"', "'"))
                 [string]$name = $line.Split('=')[0].Trim().Trim(@('"', "'"))
                 switch ($name) {
