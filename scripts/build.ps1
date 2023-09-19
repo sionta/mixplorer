@@ -161,14 +161,16 @@ process {
         if ([System.IO.File]::Exists($inputSvgFile)) {
             if ($inputSvgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
                 $default_folder_icon = [System.IO.File]::ReadAllText($inputSvgFile)
-                $purple_folder_icon = $default_folder_icon -replace '\"#FF79C6\"', '"#BD93F9"'
-                [System.IO.File]::WriteAllText($inputSvgFile, $purple_folder_icon)
+                if ($default_folder_icon -match '\"#FF79C6\"') {
+                  $purple_folder_icon = $default_folder_icon -replace '\"#FF79C6\"', '"#BD93F9"'
+                  [System.IO.File]::WriteAllText($inputSvgFile, $purple_folder_icon)
+                }
             }
             $resizes = $templates.icons[$icon]
             $options = "$inputSvgFile", '--output', "$outputPngFile"
             if ($resizes) { $options += '--width', "$resizes", '--height', "$resizes" }
             [System.Diagnostics.Process]::Start($svgTool, $options).StandardOutput
-            if ($default_folder_icon) {
+            if ($purple_folder_icon) {
                 [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
                 $default_folder_icon = $null; $purple_folder_icon = $null
             }
