@@ -43,7 +43,7 @@ function remove_entry_zip {
 
 function delete_git_tag([string[]]$tag, [switch]$all) {
     # https://stackoverflow.com/a/44702758
-    foreach ($i in 'git', 'gh') { if (!(Get-Command $i -ea:0)) { "Need install $i"; exit 1 } }
+    foreach ($g in 'git', 'gh') { if (-not(Get-Command $g -ea:0)) { "Need to install $g."; exit 1 } }
     if ($(git tag)) { git fetch --tags } else { 'Not a git repository: .git'; exit 1 }
     if ($all) { $tags = $(git tag --list) } else { $tags = $tag }
     if (!$tags) { 'Require tag name.'; exit 1 }
