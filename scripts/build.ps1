@@ -24,17 +24,20 @@ begin {
     [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
     $ROOT_PATH = [System.Environment]::CurrentDirectory
 
+   if ($Name) {
+        $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
+    } else {
+        $BASE_NAME = 'dracula-' + $Accent.ToLower()
+    }
+    [System.Console]::WriteLine("Selected name is '$BASE_NAME'.")
+    
     if ($Accent -eq 'Purple') {
         $accentHex = '#BD93F9'; $titleName = 'Dracula Purple'
     } else {
         $accentHex = '#FF79C6'; $titleName = 'Dracula';
     }
-    if ($Name) {
-        $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
-    } else {
-        $BASE_NAME = 'dracula-' + $Accent.ToLower()
-    }
 
+    [System.Console]::WriteLine("Selected accent is '$Accent'.")
     $metaData = [System.Collections.Hashtable]::new()
     $sourceRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
@@ -110,7 +113,7 @@ begin {
     }
 }
 process {
-    [System.Console]::WriteLine("Building name '$BASE_NAME' with accent '$Accent'.")
+    [System.Console]::WriteLine("Building...")
     $buildRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'build')
     $buildNameDir = [System.IO.Path]::Combine($buildRootDir, $BASE_NAME)
     $buildFontDir = [System.IO.Path]::Combine($buildNameDir, 'fonts')
@@ -129,8 +132,8 @@ process {
     foreach ($font in $metaData.fonts.keys) {
         if ($metaData.fonts[$font]) {
             $fontFileValue = $metaData.fonts[$font] -replace '\\', '/'
-            $fontFileName = [System.IO.Path]::GetFileName($fontFileValue)
-            $fontDirName = [System.IO.Path]::GetDirectoryName($fontFileValue)
+            $fontFileName = $fontFileValue.Split('/')[-1]
+            $fontDirName = $fontFileValue.Split('/')[-2]
             if ($fontFileValue.EndsWith('.ttf')) {
                 if ($fontFileValue -ne "fonts/$fontDirName/$fontFileName") {
                     $fontFileValue = "fonts/$fontDirName/$fontFileName"
@@ -147,14 +150,15 @@ process {
                         $itemName = [System.IO.Path]::GetFileName($itemFile)
                         $destFilePath = [System.IO.Path]::Combine($destDirPath, $itemName)
                         if (-not([System.IO.File]::Exists($destFilePath))) {
+                          [System.Console]::WriteLine("Copying '$itemFile'.")
                             [System.IO.File]::Copy($itemFile, $destFilePath, $true)
                         }
                     }
                 } else {
-                    [System.Console]::WriteLine("Cannot found: $fromFilePath.")
+                    [System.Console]::WriteLine("Cannot found '$fromFilePath'.")
                 }
             } else {
-                [System.Console]::WriteLine("Is not ttf format: $fontFileValue.")
+                [System.Console]::WriteLine("Is not ttf format '$fontFileValue'.")
             }
         } else {
             $metaData.properties.Remove($font)
@@ -174,6 +178,7 @@ process {
             }
             $outputPngSize = $metaData.icons[$icon]
             if ($outputPngSize) { $resizes = '--width', "$outputPngSize", '--height', "$outputPngSize" }
+            [System.Console]::WriteLine("Converting '$inputSvgFile'.")
             svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
             if ($default_folder_icon) {
                 [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
