@@ -40,11 +40,11 @@ begin {
 
     # This will validate the templates.txt file. This method is
     # the same as using the ConvertFrom-StringData cmdlets.
-    $fileTemplate = [System.IO.Path]::Combine($sourceRootDir, 'templates.txt')
-    if ([System.IO.File]::Exists($fileTemplate)) {
+    $fileMetaData = [System.IO.Path]::Combine($sourceRootDir, 'templates.txt')
+    if ([System.IO.File]::Exists($fileMetaData)) {
         $metaData.Add('properties', [System.Collections.Hashtable]::new())
         $metaData.Add('fonts', [System.Collections.Hashtable]::new())
-        foreach ($line in [System.IO.File]::ReadAllLines($fileTemplate)) {
+        foreach ($line in [System.IO.File]::ReadAllLines($fileMetaData)) {
             [string]$line = $line.Trim().Trim(@('"', "'"))
             if ($line -and $line[0] -ne '#') {
                 [string]$value = $line.Split('=')[1].Trim().Trim(@('"', "'"))
@@ -74,7 +74,7 @@ begin {
             ).ForEach({ $metaData.properties[$_] = $accentHex })
         }
     } else {
-        [System.Console]::WriteLine("Cannot found: $fileTemplate.")
+        [System.Console]::WriteLine("Cannot found: $fileMetaData.")
         exit 1
     }
     $sourceIconDir = [System.IO.Path]::Combine($sourceRootDir, 'icons')
@@ -129,8 +129,8 @@ process {
     foreach ($font in $metaData.fonts.keys) {
         if ($metaData.fonts[$font]) {
             $fontFileValue = $metaData.fonts[$font] -replace '\\', '/'
-            $fontFileName = $fontFileValue.Split('/')[-1]
-            $fontDirName = $fontFileValue.Split('/')[-2]
+            $fontFileName = [System.IO.Path]::GetFileName($fontFileValue)
+            $fontDirName = [System.IO.Path]::GetDirectoryName($fontFileValue)
             if ($fontFileValue.EndsWith('.ttf')) {
                 if ($fontFileValue -ne "fonts/$fontDirName/$fontFileName") {
                     $fontFileValue = "fonts/$fontDirName/$fontFileName"
