@@ -30,14 +30,14 @@ begin {
         $BASE_NAME = 'dracula-' + $Accent.ToLower()
     }
     [System.Console]::WriteLine("Selected name is '$BASE_NAME'.")
-    
+
     if ($Accent -eq 'Purple') {
         $accentHex = '#BD93F9'; $titleName = 'Dracula Purple'
     } else {
         $accentHex = '#FF79C6'; $titleName = 'Dracula';
     }
-
     [System.Console]::WriteLine("Selected accent is '$Accent'.")
+
     $metaData = [System.Collections.Hashtable]::new()
     $sourceRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
@@ -64,7 +64,8 @@ begin {
             }
         }
         if ($Accent -eq 'Purple') {
-            $metaData.properties['title'] = $titleName; @(
+            $metaData.properties['title'] = $titleName
+            @(
                 'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
                 'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
                 'highlight_visited_folder', 'text_bar_tab_selected',
@@ -150,7 +151,6 @@ process {
                         $itemName = [System.IO.Path]::GetFileName($itemFile)
                         $destFilePath = [System.IO.Path]::Combine($destDirPath, $itemName)
                         if (-not([System.IO.File]::Exists($destFilePath))) {
-                          [System.Console]::WriteLine("Copying '$itemFile'.")
                             [System.IO.File]::Copy($itemFile, $destFilePath, $true)
                         }
                     }
@@ -178,7 +178,6 @@ process {
             }
             $outputPngSize = $metaData.icons[$icon]
             if ($outputPngSize) { $resizes = '--width', "$outputPngSize", '--height', "$outputPngSize" }
-            [System.Console]::WriteLine("Converting '$inputSvgFile'.")
             svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
             if ($default_folder_icon) {
                 [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
