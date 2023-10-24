@@ -10,13 +10,13 @@ on:
     branches:
       - 'master'
 
-permissions: write-all
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # allows the action to create a release.
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
