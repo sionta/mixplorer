@@ -17,7 +17,7 @@
 - Add `Dracula` logo in skin settings.
 - Add `Shuffle` icon in sort menu (_v6.60+_).
 - Add `No item` icon if folder is empty.
-- New icon bookmarks ([**#10**](https://github.com/dracula/mixplorer/issues/10)):
+- Add new icon in bookmarks ([**#10**](https://github.com/dracula/mixplorer/issues/10)):
   - `Instagram`
   - `Telegram`
   - `Twitter`
