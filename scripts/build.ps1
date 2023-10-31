@@ -21,6 +21,7 @@ param (
 )
 begin {
     [System.Console]::WriteLine('Initializing...')
+    
     [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
     $ROOT_PATH = [System.Environment]::CurrentDirectory
 
@@ -29,14 +30,12 @@ begin {
     } else {
         $BASE_NAME = 'dracula-' + $Accent.ToLower()
     }
-    [System.Console]::WriteLine("Selected name is '$BASE_NAME'.")
-
+    
     if ($Accent -eq 'Purple') {
         $accentHex = '#BD93F9'; $titleName = 'Dracula Purple'
     } else {
         $accentHex = '#FF79C6'; $titleName = 'Dracula';
     }
-    [System.Console]::WriteLine("Selected accent is '$Accent'.")
 
     $metaData = [System.Collections.Hashtable]::new()
     $sourceRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'res')
@@ -114,14 +113,17 @@ begin {
     }
 }
 process {
-    [System.Console]::WriteLine("Building...")
+    [System.Console]::WriteLine("Building name '$BASE_NAME' with accent '$Accent'...")
+    
     $buildRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'build')
     $buildNameDir = [System.IO.Path]::Combine($buildRootDir, $BASE_NAME)
     $buildFontDir = [System.IO.Path]::Combine($buildNameDir, 'fonts')
     $buildIconDir = [System.IO.Path]::Combine($buildNameDir, 'drawable')
+    
     if ([System.IO.Directory]::Exists($buildNameDir)) {
         [System.IO.Directory]::Delete($buildNameDir, $true)
     }
+    
     foreach ($buildDir in $buildRootDir, $buildFontDir, $buildIconDir) {
         if (-not([System.IO.Directory]::Exists($buildDir))) {
             [System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
