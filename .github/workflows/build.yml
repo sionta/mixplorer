@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     # permissions:
     #   contents: write # allows the action to create a release.
-    # env:
-    #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Build Package
@@ -28,6 +26,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pwsh -File ./tools/changelog.ps1 -noheader > ./release_notes.txt
           gh release create ${{ github.ref }} $(find ./build -type f) \
