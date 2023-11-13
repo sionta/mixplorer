@@ -1,7 +1,4 @@
-# WARNING: This file can only be validated in PowerShell.
-
-# For the font only supports '.ttf' (TrueType) format
-#   example structure 'fonts/FontName/FontName.ttf'.
+# The font only supports TrueType (.ttf) format.
 font_editor                    = "fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"
 font_hex                       = ""
 font_popup                     = "fonts/OpenSans/OpenSans-Regular.ttf"

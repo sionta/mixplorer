@@ -21,16 +21,16 @@ param (
 )
 begin {
     [System.Console]::WriteLine('Initializing...')
-    
+
     [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
     $ROOT_PATH = [System.Environment]::CurrentDirectory
 
-   if ($Name) {
+    if ($Name) {
         $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
     } else {
         $BASE_NAME = 'dracula-' + $Accent.ToLower()
     }
-    
+
     if ($Accent -eq 'Purple') {
         $accentHex = '#BD93F9'; $titleName = 'Dracula Purple'
     } else {
@@ -40,9 +40,9 @@ begin {
     $metaData = [System.Collections.Hashtable]::new()
     $sourceRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
-    # This will validate the templates.txt file. This method is
+    # This will validate the properties.txt file. This method is
     # the same as using the ConvertFrom-StringData cmdlets.
-    $fileMetaData = [System.IO.Path]::Combine($sourceRootDir, 'templates.txt')
+    $fileMetaData = [System.IO.Path]::Combine($sourceRootDir, 'properties.txt')
     if ([System.IO.File]::Exists($fileMetaData)) {
         $metaData.Add('properties', [System.Collections.Hashtable]::new())
         $metaData.Add('fonts', [System.Collections.Hashtable]::new())
@@ -62,7 +62,7 @@ begin {
                 }
             }
         }
-        if ($Accent -eq 'Purple') {
+        if ($Accent -eq 'Purple' -and $metaData.properties) {
             $metaData.properties['title'] = $titleName
             @(
                 'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
@@ -113,17 +113,17 @@ begin {
     }
 }
 process {
-    [System.Console]::WriteLine("Building name '$BASE_NAME' with accent '$Accent'...")
-    
+    [System.Console]::WriteLine("Building name '$BASE_NAME' with accent '$Accent'")
+
     $buildRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'build')
     $buildNameDir = [System.IO.Path]::Combine($buildRootDir, $BASE_NAME)
     $buildFontDir = [System.IO.Path]::Combine($buildNameDir, 'fonts')
     $buildIconDir = [System.IO.Path]::Combine($buildNameDir, 'drawable')
-    
+
     if ([System.IO.Directory]::Exists($buildNameDir)) {
         [System.IO.Directory]::Delete($buildNameDir, $true)
     }
-    
+
     foreach ($buildDir in $buildRootDir, $buildFontDir, $buildIconDir) {
         if (-not([System.IO.Directory]::Exists($buildDir))) {
             [System.IO.Directory]::CreateDirectory($buildDir) | Out-Null

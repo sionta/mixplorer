@@ -1,11 +1,13 @@
 /build/*
 /res/drawable/*.png
 /template*
-/tests/*
+# /tests/*
+/test*/*
 *.7z
 *.lnk
 *.mit
 *.tmp
 *.zip
 tests.*
+test*.*
 CHANGES.md
