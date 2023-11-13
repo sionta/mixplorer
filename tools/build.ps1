@@ -20,8 +20,6 @@ param (
     [Alias('f')][switch]$Force
 )
 begin {
-    [System.Console]::WriteLine('Initializing...')
-
     [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
     $ROOT_PATH = [System.Environment]::CurrentDirectory
 
@@ -120,10 +118,6 @@ process {
     $buildFontDir = [System.IO.Path]::Combine($buildNameDir, 'fonts')
     $buildIconDir = [System.IO.Path]::Combine($buildNameDir, 'drawable')
 
-    if ([System.IO.Directory]::Exists($buildNameDir)) {
-        [System.IO.Directory]::Delete($buildNameDir, $true)
-    }
-
     foreach ($buildDir in $buildRootDir, $buildFontDir, $buildIconDir) {
         if (-not([System.IO.Directory]::Exists($buildDir))) {
             [System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
@@ -134,33 +128,35 @@ process {
     $sourceFontDir = [System.IO.Path]::Combine($sourceRootDir, 'fonts')
     foreach ($font in $metaData.fonts.keys) {
         if ($metaData.fonts[$font]) {
-            $fontFileValue = $metaData.fonts[$font] -replace '\\', '/'
-            $fontFileName = $fontFileValue.Split('/')[-1]
-            $fontDirName = $fontFileValue.Split('/')[-2]
-            if ($fontFileValue.EndsWith('.ttf')) {
-                if ($fontFileValue -ne "fonts/$fontDirName/$fontFileName") {
-                    $fontFileValue = "fonts/$fontDirName/$fontFileName"
+            $fontValue = $metaData.fonts[$font] -replace '\\', '/'
+            $fontName = $fontValue.Split('/')[-1]
+            $fontDir = $fontValue.Split('/')[-2]
+            if ($fontValue.EndsWith('.ttf')) {
+                if ($fontValue -ne "fonts/$fontDir/$fontName") {
+                    $fontValue = "fonts/$fontDir/$fontName"
                 }
-                $fromDirPath = [System.IO.Path]::Combine($sourceFontDir, $fontDirName)
-                $fromFilePath = [System.IO.Path]::Combine($fromDirPath, $fontFileName)
-                if ([System.IO.File]::Exists($fromFilePath)) {
-                    $metaData.properties[$font] = $fontFileValue
-                    $destDirPath = [System.IO.Path]::Combine($buildFontDir, $fontDirName)
+                $fromDirPath = [System.IO.Path]::Combine($sourceFontDir, $fontDir)
+                $fromFileName = [System.IO.Path]::Combine($fromDirPath, $fontName)
+                if ([System.IO.File]::Exists($fromFileName)) {
+                    $metaData.properties[$font] = $fontValue
+                    $destDirPath = [System.IO.Path]::Combine($buildFontDir, $fontDir)
                     if (-not([System.IO.Directory]::Exists($destDirPath))) {
                         [System.IO.Directory]::CreateDirectory($destDirPath) | Out-Null
                     }
-                    foreach ($itemFile in [System.IO.Directory]::EnumerateFiles($fromDirPath)) {
+                    $itemFiles = [System.IO.Directory]::EnumerateFiles($fromDirPath)
+                    foreach ($itemFile in $itemFiles) {
                         $itemName = [System.IO.Path]::GetFileName($itemFile)
-                        $destFilePath = [System.IO.Path]::Combine($destDirPath, $itemName)
-                        if (-not([System.IO.File]::Exists($destFilePath))) {
-                            [System.IO.File]::Copy($itemFile, $destFilePath, $true)
+                        $destFileName = [System.IO.Path]::Combine($destDirPath, $itemName)
+                        if (-not([System.IO.File]::Exists($destFileName))) {
+                            Write-Verbose "$fontName`: $destFileName"
+                            [System.IO.File]::Copy($itemFile, $destFileName, $true)
                         }
                     }
                 } else {
-                    [System.Console]::WriteLine("Cannot found '$fromFilePath'.")
+                    [System.Console]::WriteLine("Cannot found '$fromFileName'.")
                 }
             } else {
-                [System.Console]::WriteLine("Is not ttf format '$fontFileValue'.")
+                [System.Console]::WriteLine("Is not ttf format '$fontValue'.")
             }
         } else {
             $metaData.properties.Remove($font)
@@ -169,23 +165,25 @@ process {
 
     [System.Console]::WriteLine('Converting icon files...')
     foreach ($icon in $metaData.icons.keys) {
-        $inputSvgFile = [System.IO.Path]::Combine($sourceIconDir, "$icon.svg")
-        $outputPngFile = [System.IO.Path]::Combine($buildIconDir, "$icon.png")
-        if ([System.IO.File]::Exists($inputSvgFile)) {
-            $default_folder_icon = $null; $purple_folder_icon = $null
-            if ($inputSvgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
-                $default_folder_icon = [System.IO.File]::ReadAllText($inputSvgFile)
-                $purple_folder_icon = $default_folder_icon -replace '\"#FF79C6\"', '"#BD93F9"'
-                [System.IO.File]::WriteAllText($inputSvgFile, $purple_folder_icon)
-            }
-            $outputPngSize = $metaData.icons[$icon]
-            if ($outputPngSize) { $resizes = '--width', "$outputPngSize", '--height', "$outputPngSize" }
-            svg2png "$inputSvgFile" '--output' "$outputPngFile" $resizes
-            if ($default_folder_icon) {
-                [System.IO.File]::WriteAllText($inputSvgFile, $default_folder_icon)
+        $svgFile = [System.IO.Path]::Combine($sourceIconDir, "$icon.svg")
+        $pngFile = [System.IO.Path]::Combine($buildIconDir, "$icon.png")
+        if ([System.IO.File]::Exists($svgFile)) {
+            $outSize = $metaData.icons[$icon]
+            if ($outSize) { $resizes = '--width', "$outSize", '--height', "$outSize" }
+            if ($svgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
+                $default = [System.IO.File]::ReadAllText($svgFile)
+                $purples = $default -replace '\"#FF79C6\"', '"#BD93F9"'
+                $tmpfile = [System.IO.Path]::GetTempFileName()
+                [System.IO.File]::WriteAllText($tmpfile, $purples)
+                Write-Verbose "$([System.IO.Path]::GetFileName($tmpfile)): $pngFile"
+                svg2png "$tmpfile" '--output' "$pngFile" $resizes
+                [System.IO.File]::Delete($tmpfile)
+            } else {
+                Write-Verbose "$icon.svg: $pngFile"
+                svg2png "$svgFile" '--output' "$pngFile" $resizes
             }
         } else {
-            [System.Console]::WriteLine("Cannot found: $inputSvgFile.")
+            [System.Console]::WriteLine("Cannot found: $svgFile.")
         }
     }
 
@@ -199,6 +197,7 @@ process {
         $xmldoc.AppendChild($elroot) | Out-Null
         foreach ($item in $metaData.properties.keys) {
             if ($metaData.properties[$item]) {
+                Write-Verbose "$item`: $($metaData.properties[$item])"
                 $child = $xmldoc.CreateElement('entry')
                 $child.SetAttribute('key', $item)
                 $child.InnerText = $metaData.properties[$item]
@@ -250,4 +249,7 @@ end {
     }
     [System.Console]::WriteLine('Finished. packaged file results:')
     [System.IO.Directory]::GetFiles($buildRootDir, "$BASE_NAME.*")
+    if ([System.IO.Directory]::Exists($buildNameDir)) {
+        [System.IO.Directory]::Delete($buildNameDir, $true)
+    }
 }
