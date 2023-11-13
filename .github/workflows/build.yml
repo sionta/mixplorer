@@ -33,4 +33,3 @@ jobs:
             --notes-file ./release_notes.txt \
             --draft=false \
             --prerelease=false \
-            --security
