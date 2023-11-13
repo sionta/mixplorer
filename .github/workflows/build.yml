@@ -20,8 +20,8 @@ jobs:
       - name: Build Package
         run: |
           sudo apt-get install -y librsvg2-bin
-          pwsh -File ./tools/build.ps1 -f -a pink
-          pwsh -File ./tools/build.ps1 -f -a purple
+          pwsh -File ./tools/build.ps1 -verbose -f -a pink
+          pwsh -File ./tools/build.ps1 -verbose -f -a purple
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
