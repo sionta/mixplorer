@@ -1,4 +1,4 @@
-name: Release Package
+name: Deploy Theme
 
 on:
   push:

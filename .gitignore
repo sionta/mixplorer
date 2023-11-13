@@ -1,12 +1,8 @@
-/build/*
-/res/drawable/*.png
-/template*
-# /tests/*
-/test*/*
+/build
+/test
 *.7z
 *.lnk
 *.mit
 *.tmp
 *.zip
-tests.*
-CHANGES.md
+release_notes.*
