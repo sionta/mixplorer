@@ -1,10 +1,10 @@
-[CmdletBinding(DefaultParameterSetName = 'stdout')]
+[CmdletBinding(DefaultParameterSetName = 'output')]
 param (
-    [Parameter(ParameterSetName = 'stdout')]
+    [Parameter(ParameterSetName = 'output')]
     [Alias('i')][int]$Index = 0,
-    [Parameter(ParameterSetName = 'stdout')]
+    [Parameter(ParameterSetName = 'output')]
     [Alias('n')][switch]$NoHeader,
-    [Parameter(ParameterSetName = 'example')]
+    [Parameter(ParameterSetName = 'sample')]
     [Alias('e')][switch]$Example
 )
 begin {

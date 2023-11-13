@@ -4,8 +4,8 @@ on:
   push:
     tags:
       - 'v*'
-    # branches:
-    #   - 'master'
+    branches:
+      - 'master'
   pull_request:
     branches:
       - 'master'
@@ -25,7 +25,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: build-mixplorer
+          name: output-artifact
           path: ./build/*.*
         if: github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
       - name: Create Release
