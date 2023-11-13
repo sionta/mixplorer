@@ -9,5 +9,4 @@
 *.tmp
 *.zip
 tests.*
-test*.*
 CHANGES.md
