@@ -17,16 +17,11 @@ jobs:
       contents: write # allows the action to create a release.
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Python
-        with:
-          python-version: '3.9'
-          check-latest: true
-        uses: actions/setup-python@v4
       - name: Build Package
         run: |
           sudo apt-get install -y librsvg2-bin
-          python ./tools/build.py -f -a pink
-          python ./tools/build.py -f -a purple
+          pwsh -File ./tools/build.ps1 -verbose -f -a pink
+          pwsh -File ./tools/build.ps1 -verbose -f -a purple
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -38,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python ./tools/changelog.py -n > ./release_notes.txt
+          pwsh -File ./tools/changelog.ps1 -noheader > ./release_notes.txt
           gh release create ${{ github.ref_name }} $(find ./build -type f) \
             --title ${{ github.ref_name }} \
             --notes-file ./release_notes.txt \
