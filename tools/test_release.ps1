@@ -48,7 +48,7 @@ function push_add_all {
     $branch = git rev-parse --abbrev-ref HEAD
     git add .
     git commit -m $message
-    push origin $branch
+    git push origin $branch
 }
 
 function delete_all_tag {
