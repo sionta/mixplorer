@@ -37,6 +37,7 @@ jobs:
           gh release create ${{ github.ref_name }} $(find ./build -type f) \
             --title ${{ github.ref_name }} \
             --notes-file ./release_notes.txt \
+            --generate-notes \
             --draft=false \
             --prerelease=false \
             --verify-tag
