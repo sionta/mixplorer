@@ -18,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
+        with:
+          python-version: '3.9'
+          check-latest: true
         uses: actions/setup-python@v4
       - name: Build Package
         run: |
