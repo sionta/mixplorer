@@ -30,7 +30,8 @@ def verbose_print(message):
 
 print('Initializing...')
 META_DATA = {'properties': {}, 'fonts': {}, 'icons': {}}
-ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+# ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+ROOT_PATH = os.path.abspath(os.path.dirname(__file__) + '/..')
 
 # changes the current working directory to the ROOT_PATH
 os.chdir(ROOT_PATH)
