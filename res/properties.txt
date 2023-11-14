@@ -1,4 +1,4 @@
-# The font only supports TrueType (.ttf) format.
+# The fonts only support TrueType (.ttf) format.
 font_editor                    = "fonts/JetBrainsMono/JetBrainsMono-Regular.ttf"
 font_hex                       = ""
 font_popup                     = "fonts/OpenSans/OpenSans-Regular.ttf"
@@ -6,7 +6,7 @@ font_primary                   = "fonts/OpenSans/OpenSans-Regular.ttf"
 font_secondary                 = "fonts/OpenSans/OpenSans-Regular.ttf"
 font_title                     = "fonts/OpenSans/OpenSans-Regular.ttf"
 
-# COLORS
+# The colors use ARGB or RGB format with hex color codes.
 bg_bar_action                  = "#191A21"
 bg_bar_main                    = "#191A21"
 bg_bar_tab                     = "#282A36"
@@ -80,7 +80,7 @@ tint_tab_indicator_selected    = "#FF79C6"
 tint_widget_off                = "#44475A"
 tint_widget_on                 = "#44475A"
 
-# SETTINGS
+# Configuration settings
 author                         = "sionta"
 background_dim                 = "100"
 bold_grid_primary_text         = "false"
