@@ -228,19 +228,22 @@ process {
                     $stream, $path, $file, $level)
             }
         }
-        if ([System.IO.File]::Exists($zipFile)) {
-            [System.Console]::WriteLine('Calculating hashes...')
-            $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
-            $rel = [System.IO.Path]::GetFileName($zipFile)
-            $fs = [System.IO.File]::OpenRead($zipFile)
-            $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
-            $lines = [string]::Join('', $bytes) + ' *' + $rel
-            [System.IO.File]::WriteAllText($shaFile, $lines)
-        }
     } finally {
         if ($stream) { $stream.Dispose() }
-        if ($fs) { $fs.Dispose() }
-        if ($alg) { $alg.Dispose() }
+        if ([System.IO.File]::Exists($zipFile)) {
+            [System.Console]::WriteLine('Calculating hashes...')
+            try {
+                $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
+                $rel = [System.IO.Path]::GetFileName($zipFile)
+                $fs = [System.IO.File]::OpenRead($zipFile)
+                $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
+                $lines = [string]::Join('', $bytes) + ' *' + $rel
+                [System.IO.File]::WriteAllText($shaFile, $lines)
+            } finally {
+                if ($fs) { $fs.Dispose() }
+                if ($alg) { $alg.Dispose() }
+            }
+        }
     }
 }
 end {
