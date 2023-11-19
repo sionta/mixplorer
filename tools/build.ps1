@@ -16,17 +16,13 @@
 param (
     [Alias('n')][string]$Name,
     [ValidateSet('Pink', 'Purple')]
-    [Alias('a')][string]$Accent = 'Pink',
-    [Alias('f')][switch]$Force
+    [Alias('a')][string]$Accent = 'Pink'
 )
 begin {
-    [System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
-    $ROOT_PATH = [System.Environment]::CurrentDirectory
-
     if ($Name) {
-        $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
+        [string]$BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
     } else {
-        $BASE_NAME = 'dracula-' + $Accent.ToLower()
+        [string]$BASE_NAME = 'dracula-' + $Accent.ToLower()
     }
 
     if ($Accent -eq 'Purple') {
@@ -35,33 +31,44 @@ begin {
         $accentHex = '#FF79C6'; $titleName = 'Dracula';
     }
 
-    $metaData = [System.Collections.Hashtable]::new()
-    $sourceRootDir = [System.IO.Path]::Combine($ROOT_PATH, 'res')
+    $ROOT_PATH = [System.IO.Path]::GetFullPath("$PSScriptRoot/..")
+    [System.IO.Directory]::SetCurrentDirectory($ROOT_PATH)
+
+    $META_DATA = @{'properties' = @{}; 'fonts' = @{}; 'icons' = @{} }
+    $sourcePath = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
     # This will validate the properties.txt file. This method is
     # the same as using the ConvertFrom-StringData cmdlets.
-    $fileMetaData = [System.IO.Path]::Combine($sourceRootDir, 'properties.txt')
+    # function get_string_data($file) {
+    #     $lines = [System.IO.File]::ReadAllLines($file)
+    #     foreach ($line in $lines) {
+    #         $line = $line.Trim().Trim(@('"', "'"))
+    #         $line = $line.Split('=')[0..1]
+    #         [string]$value = $vars[1].Trim().Trim(@('"', "'"))
+    #         [string]$name = $vars[0].Trim().Trim(@('"', "'"))
+    #     }
+    # }
+
+    $fileMetaData = [System.IO.Path]::Combine($sourcePath, 'properties.txt')
     if ([System.IO.File]::Exists($fileMetaData)) {
-        $metaData.Add('properties', [System.Collections.Hashtable]::new())
-        $metaData.Add('fonts', [System.Collections.Hashtable]::new())
         foreach ($line in [System.IO.File]::ReadAllLines($fileMetaData)) {
             [string]$line = $line.Trim().Trim(@('"', "'"))
             if ($line -and $line[0] -ne '#') {
                 [string]$value = $line.Split('=')[1].Trim().Trim(@('"', "'"))
                 [string]$name = $line.Split('=')[0].Trim().Trim(@('"', "'"))
                 switch ($name) {
-                    'font_primary' { $metaData.fonts.Add($name, $value) }
-                    'font_secondary' { $metaData.fonts.Add($name, $value) }
-                    'font_title' { $metaData.fonts.Add($name, $value) }
-                    'font_popup' { $metaData.fonts.Add($name, $value) }
-                    'font_editor' { $metaData.fonts.Add($name, $value) }
-                    'font_hex' { $metaData.fonts.Add($name, $value) }
-                    Default { $metaData.properties.Add($name, $value) }
+                    'font_primary' { $META_DATA.fonts.Add($name, $value) }
+                    'font_secondary' { $META_DATA.fonts.Add($name, $value) }
+                    'font_title' { $META_DATA.fonts.Add($name, $value) }
+                    'font_popup' { $META_DATA.fonts.Add($name, $value) }
+                    'font_editor' { $META_DATA.fonts.Add($name, $value) }
+                    'font_hex' { $META_DATA.fonts.Add($name, $value) }
+                    Default { $META_DATA.properties.Add($name, $value) }
                 }
             }
         }
-        if ($Accent -eq 'Purple' -and $metaData.properties) {
-            $metaData.properties['title'] = $titleName
+        if ($Accent -eq 'Purple' -and $META_DATA.properties) {
+            $META_DATA.properties['title'] = $titleName
             @(
                 'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
                 'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
@@ -72,22 +79,21 @@ begin {
                 'text_popup_secondary_inverse', 'tint_bar_tab_icons',
                 'tint_page_separator', 'tint_popup_icons', 'tint_progress_bar',
                 'tint_scroll_thumbs', 'tint_tab_indicator_selected'
-            ).ForEach({ $metaData.properties[$_] = $accentHex })
+            ).ForEach({ $META_DATA.properties[$_] = $accentHex })
         }
     } else {
         [System.Console]::WriteLine("Cannot found: $fileMetaData.")
         exit 1
     }
-    $sourceIconDir = [System.IO.Path]::Combine($sourceRootDir, 'icons')
-    $iconConfigFile = [System.IO.Path]::Combine($sourceRootDir, 'icons.csv')
+    $sourceIconDir = [System.IO.Path]::Combine($sourcePath, 'icons')
+    $iconConfigFile = [System.IO.Path]::Combine($sourcePath, 'icons.csv')
     if ([System.IO.File]::Exists($iconConfigFile)) {
-        $metaData.Add('icons', [System.Collections.Hashtable]::new())
         $read = [System.IO.File]::ReadAllText($iconConfigFile)
         $data = ConvertFrom-Csv -InputObject $read -Delimiter ','
         for ($i = 0; $i -lt $data.Count; $i++) {
-            $name = $data.name[$i]
-            $size = $data.size[$i]
-            $metaData.icons.Add($name, $size)
+            $name = [string]$data.name[$i]
+            $size = [int]$data.size[$i]
+            $META_DATA.icons.Add($name, $size)
         }
     } else {
         [System.Console]::WriteLine("Cannot found: $iconConfigFile.")
@@ -104,7 +110,9 @@ begin {
     }
     $svgTool = ('rsvg-convert', 'cairosvg').ForEach({ Get-Command -Name $_ -ea:0 })[0]
     if ($svgTool) {
-        New-Alias -Name 'svg2png' -Value "$svgTool" -Description 'Convert svg to png'
+        function svg2png([string]$i, [string]$o, [int]$h, [int]$w) {
+            & "$svgTool" @($i, '--output', $o, '--height', $h, '--width', $w, '--format', 'png')
+        }
     } else {
         [System.Console]::WriteLine("Need to install 'rsvg-convert' or 'cairosvg'.")
         exit 1
@@ -118,17 +126,21 @@ process {
     $buildFontDir = [System.IO.Path]::Combine($buildNameDir, 'fonts')
     $buildIconDir = [System.IO.Path]::Combine($buildNameDir, 'drawable')
 
+    if ([System.IO.Directory]::Exists($buildNameDir)) {
+        [System.IO.Directory]::Delete($buildNameDir, $true)
+    }
+
     foreach ($buildDir in $buildRootDir, $buildFontDir, $buildIconDir) {
         if (-not([System.IO.Directory]::Exists($buildDir))) {
-            [System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
+            $null = [System.IO.Directory]::CreateDirectory($buildDir)
         }
     }
 
-    [System.Console]::WriteLine('Copying font files...')
-    $sourceFontDir = [System.IO.Path]::Combine($sourceRootDir, 'fonts')
-    foreach ($font in $metaData.fonts.keys) {
-        if ($metaData.fonts[$font]) {
-            $fontValue = $metaData.fonts[$font] -replace '\\', '/'
+    [System.Console]::WriteLine('Copying fonts...')
+    $sourceFontDir = [System.IO.Path]::Combine($sourcePath, 'fonts')
+    foreach ($font in $META_DATA.fonts.keys) {
+        if ($META_DATA.fonts[$font]) {
+            $fontValue = $META_DATA.fonts[$font] -replace '\\', '/'
             $fontName = $fontValue.Split('/')[-1]
             $fontDir = $fontValue.Split('/')[-2]
             if ($fontValue.EndsWith('.ttf')) {
@@ -138,17 +150,16 @@ process {
                 $fromDirPath = [System.IO.Path]::Combine($sourceFontDir, $fontDir)
                 $fromFileName = [System.IO.Path]::Combine($fromDirPath, $fontName)
                 if ([System.IO.File]::Exists($fromFileName)) {
-                    $metaData.properties[$font] = $fontValue
+                    $META_DATA.properties[$font] = $fontValue
                     $destDirPath = [System.IO.Path]::Combine($buildFontDir, $fontDir)
                     if (-not([System.IO.Directory]::Exists($destDirPath))) {
-                        [System.IO.Directory]::CreateDirectory($destDirPath) | Out-Null
+                        $null = [System.IO.Directory]::CreateDirectory($destDirPath)
                     }
                     $itemFiles = [System.IO.Directory]::EnumerateFiles($fromDirPath)
                     foreach ($itemFile in $itemFiles) {
                         $itemName = [System.IO.Path]::GetFileName($itemFile)
                         $destFileName = [System.IO.Path]::Combine($destDirPath, $itemName)
                         if (-not([System.IO.File]::Exists($destFileName))) {
-                            Write-Verbose "$fontName`: $destFileName"
                             [System.IO.File]::Copy($itemFile, $destFileName, $true)
                         }
                     }
@@ -159,97 +170,90 @@ process {
                 [System.Console]::WriteLine("Is not ttf format '$fontValue'.")
             }
         } else {
-            $metaData.properties.Remove($font)
+            $META_DATA.properties.Remove($font)
         }
     }
 
-    [System.Console]::WriteLine('Converting icon files...')
-    foreach ($icon in $metaData.icons.keys) {
+    [System.Console]::WriteLine('Converting icons...')
+    foreach ($icon in $META_DATA.icons.keys) {
         $svgFile = [System.IO.Path]::Combine($sourceIconDir, "$icon.svg")
         $pngFile = [System.IO.Path]::Combine($buildIconDir, "$icon.png")
+        $outSize = [int]$META_DATA.icons[$icon]
+        $options = @{'i' = "$svgFile"; 'o' = "$pngFile" }
         if ([System.IO.File]::Exists($svgFile)) {
-            $outSize = $metaData.icons[$icon]
-            if ($outSize) { $resizes = '--width', "$outSize", '--height', "$outSize" }
+            if ($outSize) { $options['h'] = $outSize; $options['w'] = $outSize }
             if ($svgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
                 $default = [System.IO.File]::ReadAllText($svgFile)
                 $purples = $default -replace '\"#FF79C6\"', '"#BD93F9"'
                 $tmpfile = [System.IO.Path]::GetTempFileName()
                 [System.IO.File]::WriteAllText($tmpfile, $purples)
-                Write-Verbose "$([System.IO.Path]::GetFileName($tmpfile)): $pngFile"
-                svg2png "$tmpfile" '--output' "$pngFile" $resizes
+                $options['i'] = "$tmpfile"
+            }
+            svg2png @options
+            if ($tmpfile -and [System.IO.File]::Exists($tmpfile)) {
                 [System.IO.File]::Delete($tmpfile)
-            } else {
-                Write-Verbose "$icon.svg: $pngFile"
-                svg2png "$svgFile" '--output' "$pngFile" $resizes
             }
         } else {
             [System.Console]::WriteLine("Cannot found: $svgFile.")
         }
     }
 
-    [System.Console]::WriteLine('Generating properties file...')
+    [System.Console]::WriteLine('Generating properties...')
     $buildPropXml = [System.IO.Path]::Combine($buildNameDir, 'properties.xml')
     try {
         $xmldoc = [System.Xml.XmlDocument]::new()
         $xmldec = $xmldoc.CreateXmlDeclaration('1.0', 'utf-8', $null)
-        $xmldoc.AppendChild($xmldec) | Out-Null
-        $elroot = $xmldoc.CreateElement('properties')
-        $xmldoc.AppendChild($elroot) | Out-Null
-        foreach ($item in $metaData.properties.keys) {
-            if ($metaData.properties[$item]) {
-                Write-Verbose "$item`: $($metaData.properties[$item])"
+        $null = $xmldoc.AppendChild($xmldec)
+        $root = $xmldoc.CreateElement('properties')
+        $null = $xmldoc.AppendChild($root)
+        foreach ($item in $META_DATA.properties.keys) {
+            if ($META_DATA.properties[$item]) {
                 $child = $xmldoc.CreateElement('entry')
                 $child.SetAttribute('key', $item)
-                $child.InnerText = $metaData.properties[$item]
-                $elroot.AppendChild($child) | Out-Null
+                $child.InnerText = $META_DATA.properties[$item]
+                $null = $root.AppendChild($child)
             }
         }
     } finally {
         $xmldoc.Save($buildPropXml)
     }
 
-    [System.Console]::WriteLine('Packaging theme files...')
-    $filePack = $buildNameDir + '.mit'
-    if ([System.IO.File]::Exists($filePack)) {
-        [System.IO.File]::Delete($filePack)
+    [System.Console]::WriteLine('Packaging themes...')
+    $zipFile = $buildNameDir + '.mit'
+    $shaFile = $zipFile + '.sha1'
+    if ([System.IO.File]::Exists($zipFile)) {
+        [System.IO.File]::Delete($zipFile)
     }
     try {
-        [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem') | Out-Null
+        $null = [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
         $level = [System.IO.Compression.CompressionLevel]::Optimal
-        [System.IO.Compression.ZipFile]::CreateFromDirectory($buildNameDir, $filePack, $level, $false)
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($buildNameDir, $zipFile, $level, $false)
         $mode = [System.IO.Compression.ZipArchiveMode]::Update
-        $stream = [System.IO.Compression.ZipFile]::Open($filePack, $mode)
-        foreach ($file in 'screenshot.png', 'README.md', 'LICENSE') {
+        $stream = [System.IO.Compression.ZipFile]::Open($zipFile, $mode)
+        $fileIncludes = 'screenshot.png', 'README.md', 'LICENSE'
+        foreach ($file in $fileIncludes) {
             $path = [System.IO.Path]::Combine($ROOT_PATH, $file)
             if ([System.IO.File]::Exists($path)) {
-                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
-                    $stream, $path, $file, $level
-                ) | Out-Null
+                $null = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                    $stream, $path, $file, $level)
             }
         }
+        if ([System.IO.File]::Exists($zipFile)) {
+            [System.Console]::WriteLine('Calculating hashes...')
+            $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
+            $rel = [System.IO.Path]::GetFileName($zipFile)
+            $fs = [System.IO.File]::OpenRead($zipFile)
+            $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
+            $lines = [string]::Join('', $bytes) + ' *' + $rel
+            [System.IO.File]::WriteAllText($shaFile, $lines)
+        }
     } finally {
-        $stream.Dispose()
-    }
-    try {
-        $filePackHash = $filePack + '.sha1'
-        $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
-        $rel = [System.IO.Path]::GetFileName($filePack)
-        $fs = [System.IO.File]::OpenRead($filePack)
-        $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
-        $lines = [string]::Join('', $bytes) + ' *' + $rel
-        [System.IO.File]::WriteAllText($filePackHash, $lines)
-    } finally {
-        $fs.Dispose()
-        $alg.Dispose()
+        if ($stream) { $stream.Dispose() }
+        if ($fs) { $fs.Dispose() }
+        if ($alg) { $alg.Dispose() }
     }
 }
 end {
-    if ($Force -and [System.IO.Directory]::Exists($buildNameDir)) {
-        [System.IO.Directory]::Delete($buildNameDir, $true)
-    }
-    [System.Console]::WriteLine('Finished. packaged file results:')
+    [System.Console]::WriteLine('Packaged file results:')
     [System.IO.Directory]::GetFiles($buildRootDir, "$BASE_NAME.*")
-    if ([System.IO.Directory]::Exists($buildNameDir)) {
-        [System.IO.Directory]::Delete($buildNameDir, $true)
-    }
 }

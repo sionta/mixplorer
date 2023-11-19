@@ -41,8 +41,6 @@ function create_tag_name {
     git push origin $tagName
 }
 
-
-
 function push_add_all {
     $message = $([System.Guid]::NewGuid()).ToString().Split('-')[0]
     $branch = git rev-parse --abbrev-ref HEAD

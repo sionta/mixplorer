@@ -20,8 +20,8 @@ jobs:
       - name: Build Package
         run: |
           sudo apt-get install -y librsvg2-bin
-          pwsh -File ./tools/build.ps1 -verbose -f -a pink
-          pwsh -File ./tools/build.ps1 -verbose -f -a purple
+          pwsh -File ./tools/build.ps1 -a pink
+          pwsh -File ./tools/build.ps1 -a purple
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -33,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          pwsh -File ./tools/changelog.ps1 -noheader > ./release_notes.txt
+          pwsh -File ./tools/changelog.ps1 > ./release_notes.txt
           gh release create ${{ github.ref_name }} $(find ./build -type f) \
             --title ${{ github.ref_name }} \
             --notes-file ./release_notes.txt \
