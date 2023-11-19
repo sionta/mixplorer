@@ -39,16 +39,6 @@ begin {
 
     # This will validate the properties.txt file. This method is
     # the same as using the ConvertFrom-StringData cmdlets.
-    # function get_string_data($file) {
-    #     $lines = [System.IO.File]::ReadAllLines($file)
-    #     foreach ($line in $lines) {
-    #         $line = $line.Trim().Trim(@('"', "'"))
-    #         $line = $line.Split('=')[0..1]
-    #         [string]$value = $vars[1].Trim().Trim(@('"', "'"))
-    #         [string]$name = $vars[0].Trim().Trim(@('"', "'"))
-    #     }
-    # }
-
     $fileMetaData = [System.IO.Path]::Combine($sourcePath, 'properties.txt')
     if ([System.IO.File]::Exists($fileMetaData)) {
         foreach ($line in [System.IO.File]::ReadAllLines($fileMetaData)) {
@@ -256,4 +246,7 @@ process {
 end {
     [System.Console]::WriteLine('Packaged file results:')
     [System.IO.Directory]::GetFiles($buildRootDir, "$BASE_NAME.*")
+    if ([System.IO.Directory]::Exists($buildNameDir)) {
+        [System.IO.Directory]::Delete($buildNameDir, $true)
+    }
 }
