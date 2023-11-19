@@ -1,4 +1,5 @@
 param(
+    [Parameter(Mandatory = $true)]
     [string][alias('t')]$tagName,
     [switch][alias('d')]$deleteAllTag,
     [switch][alias('a')]$pushAddAll
