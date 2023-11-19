@@ -33,8 +33,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          files=$(find ./build -maxdepth 1 -type f)
           pwsh -File ./tools/changelog.ps1 > ./release_notes.txt
-          gh release create ${{ github.ref_name }} $(find ./build -type f) \
+          gh release create ${{ github.ref_name }} $files \
             --title ${{ github.ref_name }} \
             --notes-file ./release_notes.txt \
             --generate-notes \
