@@ -27,7 +27,7 @@ jobs:
         with:
           name: dracula-artifact
           path: ./build/*.*
-        if: github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
+        # if: github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
