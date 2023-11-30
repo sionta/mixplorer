@@ -40,30 +40,30 @@ _Initial commits._
 if ($Example) { return $examples }
 
 function regexm([object]$txt, [string]$rgx) {
-    $regex =[regex]::Matches($txt, $rgx, 'multiline')
+    $regex = [regex]::Matches($txt, $rgx, 'multiline')
     return $regex.Groups.Value
 }
 
-$filename = [System.IO.Path]::GetFullPath("$PSScriptRoot/../CHANGELOG.md")
-if ([System.IO.File]::Exists($filename)) {
-    $content = [System.IO.File]::ReadAllText($filename)
+$logFile = [System.IO.Path]::GetFullPath("$PSScriptRoot/../CHANGELOG.md")
+if ([System.IO.File]::Exists($logFile)) {
+    $content = [System.IO.File]::ReadAllText($logFile)
     $results = regexm $content '^##\s\[[\d.]+\][^#\n]+([\W\w]*?)^##[^#\n]+'
 } else {
-    "File does not exist '$filename'."
+    "File does not exist '$logFile'."
     exit 1
 }
 
 if ($results) {
     $lines = $results -split '\r?\n' # Splitting using -split for all line endings
-    # $lines = $lines -notmatch '\<\!-[\W\w]*?-\>' # Removes <!-- comments -->
+    $lines = $lines -notmatch '\<\!-[\W\w]*?-\>' # Removes <!-- comments -->
     $semvers = regexm $lines '##\s+\[[\d.]+\]\s+-\s+\d{4}-\d{2}-\d{2}' # Matches ## [semver] - yyyy-mm-dd
+    $h1, $h2 = $semvers[0..1]
 }
-
-if ($semvers[0] -and $semvers[1]) {
+if ($h1 -and $h2) {
     $words = [System.Collections.Generic.List[string]]::new()
     foreach ($line in $lines) {
-        if ($line.Contains($semvers[1])) { break }
-        if ($line.Contains($semvers[0]) -and !$Body) { continue }
+        if ($line.Contains($h2)) { break }
+        if ($line.Contains($h1) -and !$Body) { continue }
         $words.Add($line)
     }
     if ($words) {

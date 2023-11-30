@@ -1,52 +1,33 @@
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+# [Changelog](https://github.com/dracula/mixplorer)
 
 ## [Unreleased]
 
 ## [1.3.0] - 2023-09-03
 
-### Added
-
-- Accent color Purple.
-- Filled icon in bookmarks.
-
-### Fixed
-
-- Button icons oversized.
+- Introduced new purple accents for a refreshed look and feel.
+- Updated bookmark icons to a filled style for improved visibility and aesthetics.
+- Corrected oversized button icons, ensuring a consistent and appropriate size across the interface for better usability.
 
 ## [1.2.0] - 2023-07-22
 
-### Added
-
-- Dracula logo in skin settings.
-- Shuffle icon in sort menu (_v6.60+_).
-- No item icon if folder is empty.
-- Instagram, Telegram, Twitter, WhatsApp and Viber icon in bookmarks ([10](https://github.com/dracula/mixplorer/issues/10)).
-- Monocolor icon in bookmarks ([#9](https://github.com/dracula/mixplorer/issues/9)).
-
-### Removed
-
-- Hubic Drive and Amazon Cloud Drive icons from the Add storage option as they may not be able to show the icons in MiXplorer (v6.60+).
+- Added Dracula logo option within skin settings for a personalized experience.
+- Incorporated a Shuffle icon in the sort menu for versions v6.60 and above, enhancing user control.
+- Implemented a No item icon to indicate empty folders, providing clearer navigation.
+- Integrated icons for Instagram, Telegram, Twitter, WhatsApp, and Viber into bookmarks for quick access ([Issue #10](https://github.com/dracula/mixplorer/issues/10)).
+- Updated bookmarks to use monocolor icons for a streamlined visual experience ([Issue #9](https://github.com/dracula/mixplorer/issues/9)).
+- Removed hubic Drive and Amazon Cloud Drive icons from the Add storage option due to potential display issues in MiXplorer v6.60+.
+- Resolved minor UI inconsistencies for smoother navigation.
 
 ## [1.1.0] - 2022-04-04
 
-### Fixed
-
-- Selection background in code editor. ([#4](https://github.com/dracula/mixplorer/issues/4#issuecomment-968925140))
-
-### Changed
-
-- Some issues with the FTP and HTTP/WebDav tile icons in the curtain, thanks [@Pushkin31](https://github.com/Pushkin31) ([#4](https://github.com/dracula/mixplorer/issues/4#issuecomment-952234665))
+- Resolved selection background issue in the code editor for improved readability ([Issue #4](https://github.com/dracula/mixplorer/issues/4#issuecomment-968925140)).
+- Addressed issues with FTP and HTTP/WebDav tile icons within the curtain; credits to [@Pushkin31](https://github.com/Pushkin31) for the report and assistance ([Issue #4](https://github.com/dracula/mixplorer/issues/4#issuecomment-952234665)).
 
 ## [1.0.0] - 2021-10-22
 
 _Initial commits._
 
-[unreleased]: <https://github.com/dracula/mixplorer/compare/v1.3.0...HEAD>
+[Unreleased]: <https://github.com/dracula/mixplorer/compare/v1.3.0...HEAD>
 [1.3.0]: <https://github.com/dracula/mixplorer/compare/v1.2.0...v1.3.0>
 [1.2.0]: <https://github.com/dracula/mixplorer/compare/v1.1.0...v1.2.0>
 [1.1.0]: <https://github.com/dracula/mixplorer/compare/v1.0.0...v1.1.0>

@@ -19,43 +19,62 @@ param (
     [Alias('a')][string]$Accent = 'Pink'
 )
 
-if ($Name -notmatch '^Dracula') {
-    $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
-} else {
-    $BASE_NAME = ($Name + '-' + $Accent).ToLower()
-}
-
 if ($Accent -eq 'Purple') {
-    $accentHex, $titleName = '#BD93F9', 'Dracula Purple'
+    $colorCode, $titleName = '#BD93F9', 'Dracula Purple'
 } else {
-    $accentHex, $titleName = '#FF79C6', 'Dracula'
+    $colorCode, $titleName = '#FF79C6', 'Dracula'
 }
 
-$ROOT_PATH = [System.IO.Path]::GetFullPath("$PSScriptRoot/..")
+if ($Name -eq 'Dracula') {
+    $BASE_NAME = ($Name + '-' + $Accent).ToLower()
+} else {
+    $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
+}
+
+$ROOT_PATH = [System.IO.DirectoryInfo]::new("$PSScriptRoot/..")
 [System.IO.Directory]::SetCurrentDirectory($ROOT_PATH)
 
+$SOURCE_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'res')
+
 $iniData = [System.Collections.Hashtable]::new()
-$iniFile = [System.IO.Path]::Combine($ROOT_PATH, 'res', 'config.ini')
+$iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'config.ini')
 if ([System.IO.File]::Exists($iniFile)) {
-    if (-not $iniData['properties']) { $iniData['properties'] = @{} }
     $lines = [System.IO.File]::ReadAllLines($iniFile)
-    foreach ($line in $lines.Trim()) {
-        if ($line -and (-not $line.StartsWith('#'))) {
-            $line = $line.Trim().Trim(@('"', "'"))
-            if ($line -match '^\[(.*)\]$') {
-                $section = $Matches[1]
-                $iniData[$section] = @{}
-            } elseif ($line -match '^(.*?)\s*=\s*(.*)$') {
-                $name, $value = $Matches[1..2]
-                # $name, $value = $Matches[1], $Matches[2]
-                if ($section -match '^(icons|fonts)$') {
-                    $iniData[$section][$name] = $value
-                }
-                if ($section -match '^(colors|settings)$') {
-                    $iniData['properties'][$name] = $value
-                    $iniData.Remove($section)
+    if ($lines -match '^\s*\[(\w+)\]\s*$|^\s*(\w+)\s*=\s*(.+)\s*$') {
+        foreach ($line in $lines.Trim()) {
+            if ($line -and (-not $line.StartsWith('#'))) {
+                $line = $line.Trim().Trim(@('"', "'"))
+                if ($line -match '^\[(.*)\]$') {
+                    $section = $Matches[1]
+                    $iniData[$section] = @{}
+                } elseif ($line -match '^(.*?)\s*=\s*(.*)$') {
+                    $name, $value = $Matches[1..2]
+                    if ($section -match '^(icons|fonts)$') {
+                        $iniData[$section][$name] = $value
+                    }
+                    if ($section -match '^(colors|settings)$') {
+                        if (-not $iniData['properties']) {
+                            $iniData['properties'] = @{}
+                        }
+                        $iniData['properties'][$name] = $value
+                        $iniData.Remove($section)
+                    }
                 }
             }
+        }
+        if ($Accent -eq 'Purple' -and $iniData['properties']) {
+            $iniData.properties['title'] = "$titleName"
+            @(
+                'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
+                'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
+                'highlight_visited_folder', 'text_bar_tab_selected',
+                'text_button_inverse', 'text_edit_selection_foreground',
+                'text_grid_primary_inverse', 'text_link_pressed',
+                'text_popup_header', 'text_popup_primary_inverse',
+                'text_popup_secondary_inverse', 'tint_bar_tab_icons',
+                'tint_page_separator', 'tint_popup_icons', 'tint_progress_bar',
+                'tint_scroll_thumbs', 'tint_tab_indicator_selected'
+            ).ForEach({ $iniData.properties["$_"] = "$colorCode" })
         }
     }
 } else {
@@ -63,49 +82,37 @@ if ([System.IO.File]::Exists($iniFile)) {
     exit 1
 }
 
-if ($Accent -eq 'Purple' -and $iniData.properties) {
-    $iniData.properties['title'] = $titleName
-    @(
-        'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
-        'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
-        'highlight_visited_folder', 'text_bar_tab_selected',
-        'text_button_inverse', 'text_edit_selection_foreground',
-        'text_grid_primary_inverse', 'text_link_pressed',
-        'text_popup_header', 'text_popup_primary_inverse',
-        'text_popup_secondary_inverse', 'tint_bar_tab_icons',
-        'tint_page_separator', 'tint_popup_icons', 'tint_progress_bar',
-        'tint_scroll_thumbs', 'tint_tab_indicator_selected'
-    ).ForEach({ $iniData.properties[$_] = $accentHex })
-}
-
-$tools = 'rsvg-convert', 'cairosvg'
+# Get executable 'rsvg-convert' or 'cairosvg' file path
+[char]$sep, $tools = [System.IO.Path]::PathSeparator, 'rsvg-convert', 'cairosvg'
 if ($IsWindows -or $PSEdition -eq 'Desktop') {
+    $tools = $tools.ForEach({ [System.IO.Path]::ChangeExtension($_, 'exe') })
     $rsvg_convert = [System.IO.Path]::Combine($ROOT_PATH, 'bin', 'rsvg-convert.exe')
     if ([System.IO.File]::Exists($rsvg_convert)) {
+        # $svgTool = [System.IO.FileInfo]::new($rsvg_convert)
         $addPath = [System.IO.Path]::GetDirectoryName($rsvg_convert)
         $oldPath = [System.Environment]::GetEnvironmentVariable('Path')
-        $newPath = ($oldPath.Split(';') -notlike $addPath) + $addPath -join ';'
+        $newPath = ($oldPath -split $sep -notlike $addPath) + $addPath -join $sep
         [System.Environment]::SetEnvironmentVariable('Path', $newPath)
-    }
-    $tools = $tools.ForEach({ $_ + '.exe' })
-    $sep = ';'
-} else {
-    $sep = ':'
-}
-foreach ($path in $env:PATH -split $sep) {
-    if ([System.IO.Directory]::Exists($path)) {
-        foreach ($tool in $tools) {
-            if ([System.IO.File]::Exists("$path/$tool")) {
-                $svgTool = [System.IO.FileInfo]::new("$path/$tool")[0]
-            }
-        }
     }
 }
 if (-not $svgTool) {
-    [System.Console]::WriteLine("Please install 'rsvg-convert' or 'cairosvg'.")
-    exit 1
+    foreach ($path in $env:PATH -split $sep) {
+        if ([System.IO.Directory]::Exists($path)) {
+            foreach ($tool in $tools) {
+                $tool = [System.IO.Path]::Combine($path, $tool)
+                if ([System.IO.File]::Exists($tool)) {
+                    $svgTool = [System.IO.FileInfo]::new($tool)
+                }
+            }
+        }
+    }
+    if (-not $svgTool) {
+        [System.Console]::WriteLine("Please install 'rsvg-convert' or 'cairosvg'.")
+        exit 1
+    }
 }
 
+# Create build directory path
 $BUILD_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'build')
 if (-not([System.IO.Directory]::Exists($BUILD_PATH))) {
     $null = [System.IO.Directory]::CreateDirectory($BUILD_PATH)
@@ -116,54 +123,54 @@ if ([System.IO.Directory]::Exists($BUILD_NAME)) {
 }
 $BUILD_ICON = [System.IO.Path]::Combine($BUILD_NAME, 'drawable')
 $BUILD_FONT = [System.IO.Path]::Combine($BUILD_NAME, 'fonts')
-
 foreach ($build in $BUILD_NAME, $BUILD_ICON, $BUILD_FONT) {
     if (-not([System.IO.Directory]::Exists($build))) {
         $null = [System.IO.Directory]::CreateDirectory($build)
     }
 }
 
+# Validate fonts
 foreach ($key in $iniData.fonts.Keys) {
-    $value = $iniData.fonts[$key]
-    if ($value) {
-        $value = $value -replace '\\', '/'
-        $base, $name = $value.Split('/')[-2..-1]
-        if ($value -ne "fonts/$base/$name") { $value = "fonts/$base/$name" }
-        if ($value.EndsWith('.ttf')) {
-            $iniData.properties[$key] = $value
-            $fromdir = [System.IO.Path]::Combine($ROOT_PATH, 'res', 'fonts', $base)
-            if ([System.IO.Directory]::Exists($fromdir)) {
-                $fromfile = [System.IO.Path]::Combine($fromdir, $name)
-                if ([System.IO.File]::Exists($fromfile)) {
-                    $target_dir = [System.IO.Path]::Combine($BUILD_FONT, $base)
-                    if (-not([System.IO.Directory]::Exists($target_dir))) {
-                        $null = [System.IO.Directory]::CreateDirectory($target_dir)
-                    }
-                    $files = [System.IO.Directory]::EnumerateFiles($fromdir)
-                    foreach ($oldfile in $files) {
-                        $fn = [System.IO.Path]::GetFileName($oldfile)
-                        $newfile = [System.IO.Path]::Combine($target_dir, $fn)
-                        [System.IO.File]::Copy($oldfile, $newfile, $true)
-                    }
-                } else {
-                    [System.Console]::WriteLine("File not found '$fromfile'.")
+    $value = $iniData.fonts[$key] -replace '\\', '/'
+    if (-not $value) { $iniData.properties.Remove($key); continue }
+    $pattern = '^fonts\/[A-Za-z0-9\s._-]+\/[A-Za-z0-9\s._-]+\.ttf$'
+    if ($value -match $pattern) {
+        # basedir: FontName (eg. /OpenSans/),
+        # basename: FontName.ttf (eg. OpenSans-Regular.ttf)
+        $basedir, $basename = $value.Split('/')[-2..-1]
+        $fromdir = [System.IO.Path]::Combine($SOURCE_PATH, 'fonts', $basedir)
+        if ([System.IO.Directory]::Exists($fromdir)) {
+            $fromfile = [System.IO.Path]::Combine($fromdir, $basename)
+            if ([System.IO.File]::Exists($fromfile)) {
+                $iniData.properties[$key] = $value
+                $destdir = [System.IO.Path]::Combine($BUILD_FONT, $basedir)
+                if (-not([System.IO.Directory]::Exists($destdir))) {
+                    $null = [System.IO.Directory]::CreateDirectory($destdir)
+                }
+                foreach ($oldfile in [System.IO.Directory]::EnumerateFiles($fromdir)) {
+                    $newfile = [System.IO.Path]::Combine(
+                        $destdir, [System.IO.Path]::GetFileName($oldfile)
+                    )
+                    [System.IO.File]::Copy($oldfile, $newfile, $true)
                 }
             } else {
-                [System.Console]::WriteLine("Directory not found '$fromdir'.")
+                [System.Console]::WriteLine("File not found '$fromfile'.")
+                $iniData.properties.Remove($key)
             }
         } else {
-            [System.Console]::WriteLine("Value '$value' is not .ttf format.")
+            [System.Console]::WriteLine("Directory not found '$fromdir'.")
+            $iniData.properties.Remove($key)
         }
     } else {
+        [System.Console]::WriteLine("The syntax must be like 'fonts/FontNameDir/FontName.tff'")
+        [System.Console]::WriteLine('Example: fonts/opensans/opensans-regular.tff')
         $iniData.properties.Remove($key)
     }
 }
 
-
-$SOURCE_ICON = [System.IO.Path]::Combine($ROOT_PATH, 'res', 'icons')
 foreach ($key in $iniData.icons.Keys) {
     $outsize = $iniData.icons[$key]
-    $svgfile = [System.IO.Path]::Combine($SOURCE_ICON, "$key.svg")
+    $svgfile = [System.IO.Path]::Combine($SOURCE_PATH, 'icons', "$key.svg")
     $pngfile = [System.IO.Path]::Combine($BUILD_ICON, "$key.png")
     $options = '--format', 'png', '--output', $pngfile, $svgfile
     if ($outsize) { $options += '--height', $outsize, '--width', $outsize }
@@ -175,7 +182,7 @@ foreach ($key in $iniData.icons.Keys) {
             [System.IO.File]::WriteAllText($tmpfile, $purples)
             $options = ($options -notlike $svgfile) + $tmpfile
         }
-        & "$($svgTool.FullName)" $options
+        & "$svgTool" $options
         if ($tmpfile -and [System.IO.File]::Exists($tmpfile)) {
             [System.IO.File]::Delete($tmpfile)
         }
