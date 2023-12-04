@@ -31,14 +31,15 @@ if ($Name -eq 'Dracula') {
     $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
 }
 
-$ROOT_PATH = [System.IO.DirectoryInfo]::new("$PSScriptRoot/..")
-[System.IO.Directory]::SetCurrentDirectory($ROOT_PATH)
-
+[System.IO.Directory]::SetCurrentDirectory('$PSScriptRoot/..')
+$ROOT_PATH = [System.Environment]::CurrentDirectory
+$BUILD_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'build')
 $SOURCE_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
 $iniData = [System.Collections.Hashtable]::new()
 $iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'config.ini')
 if ([System.IO.File]::Exists($iniFile)) {
+    # $comments = @(';','#')
     $lines = [System.IO.File]::ReadAllLines($iniFile)
     if ($lines -match '^\s*\[(\w+)\]\s*$|^\s*(\w+)\s*=\s*(.+)\s*$') {
         foreach ($line in $lines.Trim()) {
@@ -49,21 +50,20 @@ if ([System.IO.File]::Exists($iniFile)) {
                     $iniData[$section] = @{}
                 } elseif ($line -match '^(.*?)\s*=\s*(.*)$') {
                     $name, $value = $Matches[1..2]
-                    if ($section -match '^(icons|fonts)$') {
-                        $iniData[$section][$name] = $value
-                    }
                     if ($section -match '^(colors|settings)$') {
                         if (-not $iniData['properties']) {
                             $iniData['properties'] = @{}
                         }
                         $iniData['properties'][$name] = $value
                         $iniData.Remove($section)
+                    } elseif ($section -match '^(icons|fonts)$') {
+                        $iniData[$section][$name] = $value
                     }
                 }
             }
         }
         if ($Accent -eq 'Purple' -and $iniData['properties']) {
-            $iniData.properties['title'] = "$titleName"
+            $iniData['properties']['title'] = "$titleName"
             @(
                 'highlight_bar_action_buttons', 'highlight_bar_main_buttons',
                 'highlight_bar_tab_buttons', 'highlight_bar_tool_buttons',
@@ -74,7 +74,7 @@ if ([System.IO.File]::Exists($iniFile)) {
                 'text_popup_secondary_inverse', 'tint_bar_tab_icons',
                 'tint_page_separator', 'tint_popup_icons', 'tint_progress_bar',
                 'tint_scroll_thumbs', 'tint_tab_indicator_selected'
-            ).ForEach({ $iniData.properties["$_"] = "$colorCode" })
+            ).ForEach({ $iniData['properties']["$_"] = "$colorCode" })
         }
     }
 } else {
@@ -83,9 +83,10 @@ if ([System.IO.File]::Exists($iniFile)) {
 }
 
 # Get executable 'rsvg-convert' or 'cairosvg' file path
-[char]$sep, $tools = [System.IO.Path]::PathSeparator, 'rsvg-convert', 'cairosvg'
+$svgTools = @('rsvg-convert', 'cairosvg')
+$svgTool , $sep = $null, [System.IO.Path]::PathSeparator
 if ($IsWindows -or $PSEdition -eq 'Desktop') {
-    $tools = $tools.ForEach({ [System.IO.Path]::ChangeExtension($_, 'exe') })
+    $svgTools = $svgTools.ForEach({ [System.IO.Path]::ChangeExtension($_, 'exe') })
     $rsvg_convert = [System.IO.Path]::Combine($ROOT_PATH, 'bin', 'rsvg-convert.exe')
     if ([System.IO.File]::Exists($rsvg_convert)) {
         # $svgTool = [System.IO.FileInfo]::new($rsvg_convert)
@@ -95,44 +96,41 @@ if ($IsWindows -or $PSEdition -eq 'Desktop') {
         [System.Environment]::SetEnvironmentVariable('Path', $newPath)
     }
 }
-if (-not $svgTool) {
-    foreach ($path in $env:PATH -split $sep) {
-        if ([System.IO.Directory]::Exists($path)) {
-            foreach ($tool in $tools) {
-                $tool = [System.IO.Path]::Combine($path, $tool)
-                if ([System.IO.File]::Exists($tool)) {
-                    $svgTool = [System.IO.FileInfo]::new($tool)
-                }
-            }
+
+foreach ($tool in $svgTools) {
+    $paths = $env:PATH -split $sep
+    foreach ($path in $paths) {
+        $toolPath = [System.IO.Path]::Combine($path, $tool)
+        if (-not $svgTool -and [System.IO.File]::Exists($toolPath)) {
+            $svgTool = [System.IO.FileInfo]::new($toolPath)
         }
-    }
-    if (-not $svgTool) {
-        [System.Console]::WriteLine("Please install 'rsvg-convert' or 'cairosvg'.")
-        exit 1
     }
 }
 
+if (-not $svgTool) {
+    [System.Console]::WriteLine("Please install 'rsvg-convert' or 'cairosvg'.")
+    exit 1
+}
+
 # Create build directory path
-$BUILD_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'build')
-if (-not([System.IO.Directory]::Exists($BUILD_PATH))) {
-    $null = [System.IO.Directory]::CreateDirectory($BUILD_PATH)
-}
 $BUILD_NAME = [System.IO.Path]::Combine($BUILD_PATH, $BASE_NAME)
-if ([System.IO.Directory]::Exists($BUILD_NAME)) {
-    $null = [System.IO.Directory]::CreateDirectory($BUILD_NAME)
-}
 $BUILD_ICON = [System.IO.Path]::Combine($BUILD_NAME, 'drawable')
 $BUILD_FONT = [System.IO.Path]::Combine($BUILD_NAME, 'fonts')
-foreach ($build in $BUILD_NAME, $BUILD_ICON, $BUILD_FONT) {
+if ([System.IO.Directory]::Exists($BUILD_NAME)) {
+    [System.IO.Directory]::Delete($BUILD_NAME, $true)
+}
+
+$buildPaths = @($BUILD_PATH, $BUILD_NAME, $BUILD_ICON, $BUILD_FONT)
+foreach ($build in $buildPaths) {
     if (-not([System.IO.Directory]::Exists($build))) {
         $null = [System.IO.Directory]::CreateDirectory($build)
     }
 }
 
 # Validate fonts
-foreach ($key in $iniData.fonts.Keys) {
-    $value = $iniData.fonts[$key] -replace '\\', '/'
-    if (-not $value) { $iniData.properties.Remove($key); continue }
+foreach ($key in $iniData['fonts'].Keys) {
+    $value = $iniData['fonts'][$key] -replace '\\', '/'
+    if (-not $value) { $iniData['properties'].Remove($key); continue }
     $pattern = '^fonts\/[A-Za-z0-9\s._-]+\/[A-Za-z0-9\s._-]+\.ttf$'
     if ($value -match $pattern) {
         # basedir: FontName (eg. /OpenSans/),
@@ -142,7 +140,7 @@ foreach ($key in $iniData.fonts.Keys) {
         if ([System.IO.Directory]::Exists($fromdir)) {
             $fromfile = [System.IO.Path]::Combine($fromdir, $basename)
             if ([System.IO.File]::Exists($fromfile)) {
-                $iniData.properties[$key] = $value
+                $iniData['properties'][$key] = $value
                 $destdir = [System.IO.Path]::Combine($BUILD_FONT, $basedir)
                 if (-not([System.IO.Directory]::Exists($destdir))) {
                     $null = [System.IO.Directory]::CreateDirectory($destdir)
@@ -155,21 +153,21 @@ foreach ($key in $iniData.fonts.Keys) {
                 }
             } else {
                 [System.Console]::WriteLine("File not found '$fromfile'.")
-                $iniData.properties.Remove($key)
+                $iniData['properties'].Remove($key)
             }
         } else {
             [System.Console]::WriteLine("Directory not found '$fromdir'.")
-            $iniData.properties.Remove($key)
+            $iniData['properties'].Remove($key)
         }
     } else {
         [System.Console]::WriteLine("The syntax must be like 'fonts/FontNameDir/FontName.tff'")
         [System.Console]::WriteLine('Example: fonts/opensans/opensans-regular.tff')
-        $iniData.properties.Remove($key)
+        $iniData['properties'].Remove($key)
     }
 }
 
-foreach ($key in $iniData.icons.Keys) {
-    $outsize = $iniData.icons[$key]
+foreach ($key in $iniData['icons'].Keys) {
+    $outsize = $iniData['icons'][$key]
     $svgfile = [System.IO.Path]::Combine($SOURCE_PATH, 'icons', "$key.svg")
     $pngfile = [System.IO.Path]::Combine($BUILD_ICON, "$key.png")
     $options = '--format', 'png', '--output', $pngfile, $svgfile
@@ -198,8 +196,8 @@ try {
     $null = $xml.AppendChild($dec)
     $root = $xml.CreateElement('properties')
     $null = $xml.AppendChild($root)
-    foreach ($key in $iniData.properties.Keys) {
-        $value = $iniData.properties[$key]
+    foreach ($key in $iniData['properties'].Keys) {
+        $value = $iniData['properties'][$key]
         if ($value) {
             $child = $xml.CreateElement('entry')
             $child.SetAttribute('key', $key)
@@ -211,41 +209,43 @@ try {
     $xml.Save($xmlFile)
 }
 
-$zipFile = $BUILD_NAME + '.mit'
-$shaFile = $zipFile + '.sha1'
+$zipFile = [System.IO.Path]::ChangeExtension($BUILD_NAME, 'mit')
+$shaFile = [System.IO.Path]::ChangeExtension($zipFile, 'sha1')
 if ([System.IO.File]::Exists($zipFile)) {
     [System.IO.File]::Delete($zipFile)
 }
 try {
     $null = [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
     $level = [System.IO.Compression.CompressionLevel]::Optimal
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($BUILD_NAME, $zipFile, $level, $false)
+    [System.IO.Compression.ZipFile]::CreateFromDirectory(
+        $BUILD_NAME, $zipFile, $level, $false)
     $mode = [System.IO.Compression.ZipArchiveMode]::Update
     $stream = [System.IO.Compression.ZipFile]::Open($zipFile, $mode)
-    $fileIncludes = 'screenshot.png', 'README.md', 'LICENSE'
+    $fileIncludes = @('screenshot.png', 'README.md', 'LICENSE')
     foreach ($file in $fileIncludes) {
         $path = [System.IO.Path]::Combine($ROOT_PATH, $file)
         if ([System.IO.File]::Exists($path)) {
-            $null = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($stream, $path, $file, $level)
+            $null = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $stream, $path, $file, $level)
         }
     }
 } finally {
     if ($stream) { $stream.Dispose() }
-    if ([System.IO.File]::Exists($zipFile)) {
-        try {
-            $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
-            $fs = [System.IO.File]::OpenRead($zipFile)
-            $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
-            $texts = [string]::Join('', $bytes) + ' *' + [System.IO.Path]::GetFileName($zipFile)
-            [System.IO.File]::WriteAllText($shaFile, $texts)
-        } finally {
-            if ($fs) { $fs.Dispose() }
-            if ($alg) { $alg.Dispose() }
-        }
-    }
 }
 
-# [System.IO.Directory]::GetFiles($BUILD_PATH, "$BASE_NAME.*")
-# if ([System.IO.Directory]::Exists($BUILD_NAME)) {
-#     [System.IO.Directory]::Delete($BUILD_NAME, $true)
-# }
+if ([System.IO.File]::Exists($zipFile)) {
+    try {
+        $alg = [System.Security.Cryptography.HashAlgorithm]::Create('SHA1')
+        $fs = [System.IO.File]::OpenRead($zipFile)
+        $bytes = $alg.ComputeHash($fs).ForEach({ $_.ToString('x2') })
+        $texts = [string]::Join('', $bytes) + ' *' + [System.IO.Path]::GetFileName($zipFile)
+        [System.IO.File]::WriteAllText($shaFile, $texts)
+    } finally {
+        if ($fs) { $fs.Dispose() }
+        if ($alg) { $alg.Dispose() }
+    }
+}
+if ([System.IO.Directory]::Exists($BUILD_NAME)) {
+    [System.IO.Directory]::Delete($BUILD_NAME, $true)
+}
+[System.IO.Directory]::GetFiles($BUILD_PATH, "$BASE_NAME.*")

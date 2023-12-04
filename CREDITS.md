@@ -3,6 +3,7 @@
 ## Tools
 
 - [rsvg-convert](https://gitlab.gnome.org/GNOME/librsvg) ([GNU](https://gitlab.gnome.org/GNOME/librsvg/-/raw/main/COPYING.LIB))
+- [CairoSVG](https://github.com/Kozea/CairoSVG) ([GNU](https://raw.githubusercontent.com/Kozea/CairoSVG/main/LICENSE))
 
 ## Icons
 
