@@ -37,7 +37,7 @@ $BUILD_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'build')
 $SOURCE_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
 $iniData = [System.Collections.Hashtable]::new()
-$iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'config.ini')
+$iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'props.cfg')
 if ([System.IO.File]::Exists($iniFile)) {
     # $comments = @(';','#')
     $lines = [System.IO.File]::ReadAllLines($iniFile)
