@@ -1,7 +1,10 @@
+[CmdletBinding(DefaultParameterSetName = 'usetag')]
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, ParameterSetName = 'usetag')]
     [string][alias('t')]$tagName,
+    [Parameter(ParameterSetName = 'usetag')]
     [switch][alias('d')]$deleteAllTag,
+    [Parameter(ParameterSetName = 'nottag')]
     [switch][alias('a')]$pushAddAll
 )
 

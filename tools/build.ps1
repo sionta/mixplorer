@@ -14,9 +14,10 @@
 #>
 [CmdletBinding()]
 param (
-    [Alias('n')][string]$Name = 'Dracula',
+    [Alias('n')][string]$Name,
     [ValidateSet('Pink', 'Purple')]
-    [Alias('a')][string]$Accent = 'Pink'
+    [Alias('a')][string]$Accent,
+    [Alias('f')][switch]$Force
 )
 
 if ($Accent -eq 'Purple') {
@@ -31,34 +32,33 @@ if ($Name -eq 'Dracula') {
     $BASE_NAME = [System.IO.Path]::GetFileNameWithoutExtension($Name)
 }
 
-[System.IO.Directory]::SetCurrentDirectory('$PSScriptRoot/..')
+[System.IO.Directory]::SetCurrentDirectory("$PSScriptRoot/..")
 $ROOT_PATH = [System.Environment]::CurrentDirectory
 $BUILD_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'build')
 $SOURCE_PATH = [System.IO.Path]::Combine($ROOT_PATH, 'res')
 
 $iniData = [System.Collections.Hashtable]::new()
-$iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'props.cfg')
+$iniFile = [System.IO.Path]::Combine($SOURCE_PATH, 'props.ini')
 if ([System.IO.File]::Exists($iniFile)) {
-    # $comments = @(';','#')
+    $comments = @(';', '#')
     $lines = [System.IO.File]::ReadAllLines($iniFile)
-    if ($lines -match '^\s*\[(\w+)\]\s*$|^\s*(\w+)\s*=\s*(.+)\s*$') {
-        foreach ($line in $lines.Trim()) {
-            if ($line -and (-not $line.StartsWith('#'))) {
-                $line = $line.Trim().Trim(@('"', "'"))
-                if ($line -match '^\[(.*)\]$') {
-                    $section = $Matches[1]
-                    $iniData[$section] = @{}
-                } elseif ($line -match '^(.*?)\s*=\s*(.*)$') {
-                    $name, $value = $Matches[1..2]
-                    if ($section -match '^(colors|settings)$') {
-                        if (-not $iniData['properties']) {
-                            $iniData['properties'] = @{}
-                        }
-                        $iniData['properties'][$name] = $value
-                        $iniData.Remove($section)
-                    } elseif ($section -match '^(icons|fonts)$') {
-                        $iniData[$section][$name] = $value
+    foreach ($line in $lines.Trim()) {
+        if ($line) {
+            $line = $line.Trim().Trim(@('"', "'"))
+            $comments.ForEach({ if ($line.StartsWith("$_")) { continue } })
+            if ($line -match '^\[(.*)\]$') {
+                $section = $Matches[1]
+                $iniData[$section] = @{}
+            } elseif ($line -match '^(.*?)\s*=\s*(.*)$') {
+                $name, $value = $Matches[1..2]
+                if ($section -match '^(colors|settings)$') {
+                    if (-not $iniData['properties']) {
+                        $iniData['properties'] = @{}
                     }
+                    $iniData['properties'][$name] = $value
+                    $iniData.Remove($section)
+                } elseif ($section -match '^(icons|fonts)$') {
+                    $iniData[$section][$name] = $value
                 }
             }
         }
@@ -129,11 +129,13 @@ foreach ($build in $buildPaths) {
 
 # Validate fonts
 foreach ($key in $iniData['fonts'].Keys) {
+    if (-not $iniData['fonts'][$key]) {
+        $iniData['properties'].Remove($key)
+        continue
+    }
     $value = $iniData['fonts'][$key] -replace '\\', '/'
-    if (-not $value) { $iniData['properties'].Remove($key); continue }
-    $pattern = '^fonts\/[A-Za-z0-9\s._-]+\/[A-Za-z0-9\s._-]+\.ttf$'
-    if ($value -match $pattern) {
-        # basedir: FontName (eg. /OpenSans/),
+    if ($value) {
+        # basedir : FontName (eg. /OpenSans/),
         # basename: FontName.ttf (eg. OpenSans-Regular.ttf)
         $basedir, $basename = $value.Split('/')[-2..-1]
         $fromdir = [System.IO.Path]::Combine($SOURCE_PATH, 'fonts', $basedir)
@@ -145,7 +147,8 @@ foreach ($key in $iniData['fonts'].Keys) {
                 if (-not([System.IO.Directory]::Exists($destdir))) {
                     $null = [System.IO.Directory]::CreateDirectory($destdir)
                 }
-                foreach ($oldfile in [System.IO.Directory]::EnumerateFiles($fromdir)) {
+                $listFiles = [System.IO.Directory]::EnumerateFiles($fromdir)
+                foreach ($oldfile in $listFiles) {
                     $newfile = [System.IO.Path]::Combine(
                         $destdir, [System.IO.Path]::GetFileName($oldfile)
                     )
@@ -245,7 +248,8 @@ if ([System.IO.File]::Exists($zipFile)) {
         if ($alg) { $alg.Dispose() }
     }
 }
-if ([System.IO.Directory]::Exists($BUILD_NAME)) {
+
+if ($Force -and [System.IO.Directory]::Exists($BUILD_NAME)) {
     [System.IO.Directory]::Delete($BUILD_NAME, $true)
 }
-[System.IO.Directory]::GetFiles($BUILD_PATH, "$BASE_NAME.*")
+# [System.IO.Directory]::GetFiles($BUILD_PATH, "$BASE_NAME.*")
