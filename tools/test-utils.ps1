@@ -60,7 +60,7 @@ function Get-FileMetaData {
         }
     } finally {
         if ($shellobj) {
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shellobj) | Out-Null
+            $null = [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shellobj)
         }
     }
 
