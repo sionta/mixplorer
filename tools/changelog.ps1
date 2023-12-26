@@ -1,7 +1,7 @@
 [CmdletBinding(DefaultParameterSetName = 'output')]
 param (
     [Parameter(ParameterSetName = 'output')]
-    [Alias('b')][switch]$Body,
+    [Alias('b')][switch]$Full,
     [Parameter(ParameterSetName = 'sample')]
     [Alias('e')][switch]$Example
 )
@@ -63,13 +63,13 @@ if ($h1 -and $h2) {
     $words = [System.Collections.Generic.List[string]]::new()
     foreach ($line in $lines) {
         if ($line.Contains($h2)) { break }
-        if ($line.Contains($h1) -and !$Body) { continue }
+        if ($line.Contains($h1) -and !$Full) { continue }
         $words.Add($line)
     }
     if ($words) {
         if (-not $words[0]) { $words.RemoveAt(0) }
         if (-not $words[-1]) { $words.RemoveAt($words.Count - 1) }
-        if ($Body) {
+        if ($Full) {
             $head_url = regexm $content '\[[\d.]+\]:.*'
             $head_url = "`n" + $head_url[0]
         }

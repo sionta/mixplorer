@@ -6,7 +6,7 @@ function Remove-EntryFromZip {
         [Alias('l')][string[]]$List
     )
     try {
-        $null = [Reflection.Assembly]::LoadWithPartialName('System.IO.Compression')
+        $null = [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression')
         $stream = [System.IO.FileStream]::new($Path, [System.IO.FileMode]::Open)
         $mode = [System.IO.Compression.ZipArchiveMode]::Update
         $zip = [System.IO.Compression.ZipArchive]::new($stream, $mode)
@@ -17,52 +17,102 @@ function Remove-EntryFromZip {
     }
 }
 
-function Get-FileMetaData {
-    <#
-    .SYNOPSIS
-        Returns metadata information about a single file.
-    .DESCRIPTION
-        This function will return all metadata information about a specific file. It can be used to access the information stored in the filesystem.
-    .EXAMPLE
-        Get-FileMetaData -File "c:\temp\image.jpg"
-        Get information about an image file.
-    .EXAMPLE
-        Get-FileMetaData -File "c:\temp\image.jpg" | Select Dimensions
-        Show the dimensions of the image.
-    .EXAMPLE
-        Get-ChildItem -Path .\ -Filter *.exe | foreach {Get-FileMetaData -File $_.FullName | Select Name,"File version"}
-        Show the file version of all binary files in the current folder.
-    #>
-    param([Parameter(Mandatory = $True)][string]$File)
-
-    if (!(Test-Path $File -PathType Leaf)) {
-        Write-Error "File does not exist: $File"
-        return
+function Read-IniFile {
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$Path,
+        [Parameter(Position = 1)]
+        [array]$Section
+    )
+    $ini = [System.Collections.Hashtable]::new()
+    $lines = [System.IO.File]::ReadAllLines($Path)
+    foreach ($line in $lines) {
+        $line = $line.Trim('"', "'")
+        if ($line -match '^[;#]') { continue }
+        if ($line -match '\[(.+)\]') {
+            $sec = $Matches[1]
+            $ini[$sec] = [hashtable]::new()
+        } elseif ($line -match '(.+?)\s*=\s*(.+)') {
+            $key = $Matches[1]
+            $val = $Matches[2]
+            $ini[$sec][$key] = $val
+        }
     }
-
-    $fileinfo = Get-Item $File
-    $pathname = $fileinfo.DirectoryName
-    $filename = $fileinfo.Name
-
-    $property = @{}
-
-    try {
-        $shellobj = New-Object -ComObject Shell.Application
-        $folderobj = $shellobj.NameSpace($pathname)
-        $fileobj = $folderobj.ParseName($filename)
-
-        for ($i = 0; $i -le 300; $i++) {
-            $name = $folderobj.getDetailsOf($null, $i);
-            if ($name -and $fileobj) {
-                $value = $folderobj.getDetailsOf($fileobj, $i);
-                if ($value) { $property["$name"] = "$value" }
+    if ($Section) {
+        $tmp = [System.Collections.Hashtable]::new()
+        foreach ($key in $ini.Keys) {
+            if ($key -in $Section) {
+                $tmp[$key] = $ini[$key]
             }
         }
-    } finally {
-        if ($shellobj) {
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shellobj) | Out-Null
+        return $tmp
+    } else {
+        return $ini
+    }
+}
+
+function Get-FileMetaData {
+    <#
+.SYNOPSIS
+    Get Detailed file information.
+.DESCRIPTION
+    Collects various data for each file, storing information in a hash table
+.NOTES
+    This function is not supported in Linux or MacOS and only for Windows
+.LINK
+    https://learn.microsoft.com/en-us/windows/win32/shell/folder-getdetailsof
+    https://gist.github.com/woehrl01/5f50cb311f3ec711f6c776b2cb09c34e
+.EXAMPLE
+    $data = Get-FileMetaData -FilePath "c:\temp\myImage.jpg"
+    $dimen = $data.'myImage.png' | Select-Object 'Dimensions'
+    Write-Host $dimen.Dimensions
+#>
+
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string[]]$FilePath
+    )
+
+    $objInfo = [System.Collections.Hashtable]::new()
+
+    foreach ($File in $FilePath) {
+        if ([System.IO.File]::Exists($File)) {
+            # Get detailed of file info
+            $fileInfo = [System.IO.FileInfo]::new($File)
+
+            try {
+                # Create a Shell.Application COM object
+                $objShell = New-Object -ComObject Shell.Application
+
+                # Get the folder where the file is located
+                $objFolder = $objShell.NameSpace($fileInfo.DirectoryName)
+
+                # Get the file object from the folder
+                $objFolderItem = $objFolder.ParseName($fileInfo.Name)
+
+                # Retrieve and output details of the file without non-ASCII characters
+                for ($j = 0; $j -lt 266; $j++) {
+                    $objName = $objFolder.getDetailsOf($null, $j)
+                    if (-not [string]::IsNullOrWhiteSpace($objName)) {
+                        $objValue = $objFolder.GetDetailsOf($objFolderItem, $j)
+                        if (-not [string]::IsNullOrWhiteSpace($objValue)) {
+                            $hashName = $fileInfo.BaseName
+                            $objValue = [regex]::Replace($objValue, '[^\x00-\x7F]', '')
+                            if (-not $objInfo[$hashName]) { $objInfo[$hashName] = @{} }
+                            $objInfo[$hashName][$objName] = $objValue
+                        }
+                    }
+                }
+            } finally {
+                if ($objShell) {
+                    $null = [System.Runtime.InteropServices.Marshal]::ReleaseComObject([System.__ComObject]$objShell)
+                }
+            }
         }
     }
-
-    return New-Object psobject -Property $property
+    return $objInfo
 }
