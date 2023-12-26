@@ -94,24 +94,16 @@ function Get-FileMetaData {
                 # Get the file object from the folder
                 $objFolderItem = $objFolder.ParseName($fileInfo.Name)
 
-                # Retrieve and output details of the file without non-ASCII characters
-                for ($j = 0; $j -lt 266; $j++) {
-                    $objName = $objFolder.getDetailsOf($null, $j)
-                    if (-not [string]::IsNullOrWhiteSpace($objName)) {
-                        $objValue = $objFolder.GetDetailsOf($objFolderItem, $j)
-                        if (-not [string]::IsNullOrWhiteSpace($objValue)) {
-                            $hashName = $fileInfo.BaseName
-                            $objValue = [regex]::Replace($objValue, '[^\x00-\x7F]', '')
-                            if (-not $objInfo[$hashName]) { $objInfo[$hashName] = @{} }
-                            $objInfo[$hashName][$objName] = $objValue
-                        }
-                    }
-                }
-            } finally {
-                if ($objShell) {
-                    $null = [System.Runtime.InteropServices.Marshal]::ReleaseComObject([System.__ComObject]$objShell)
-                }
+        for ($i = 0; $i -le 300; $i++) {
+            $name = $folderobj.getDetailsOf($null, $i);
+            if ($name -and $fileobj) {
+                $value = $folderobj.getDetailsOf($fileobj, $i);
+                if ($value) { $property["$name"] = "$value" }
             }
+        }
+    } finally {
+        if ($shellobj) {
+            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shellobj) | Out-Null
         }
     }
     return $objInfo
