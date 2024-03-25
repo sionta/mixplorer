@@ -177,24 +177,18 @@ foreach ($key in $iniData['icons'].Keys) {
     $svgfile = [System.IO.Path]::Combine($SOURCE_PATH, 'icons', "$key.svg")
     $pngfile = [System.IO.Path]::Combine($BUILD_ICON, "$key.png")
     if ([System.IO.File]::Exists($svgfile)) {
-        $options = '--format', 'png', '--output', $pngfile, $svgfile
+        $contentSvg = [System.IO.File]::ReadAllText($svgFile)
+        $options = '--format', 'png', '--output', $pngfile
         $dimensions = $iniData['icons'][$key]
         if ($dimensions) {
             $w, $h = ($dimensions -split ',')[0..1]
-            if ($w) { $options += '--height', $w }
-            if ($h) { $options += '--width', $h }
+            if ($w) { $options += '--width', $w }
+            if ($h) { $options += '--height', $h }
         }
         if ($svgFile.EndsWith('folder.svg') -and ($Accent -eq 'Purple')) {
-            $default = [System.IO.File]::ReadAllText($svgFile)
-            $purples = $default -replace '#FF79C6', '#BD93F9'
-            $tmpfile = [System.IO.Path]::GetTempFileName()
-            [System.IO.File]::WriteAllText($tmpfile, $purples)
-            $options = ($options -notlike $svgfile) + $tmpfile
+            $contentSvg = $contentSvg -replace '#FF79C6', '#BD93F9'
         }
-        & "$svgTool" $options
-        if ($tmpfile -and [System.IO.File]::Exists($tmpfile)) {
-            [System.IO.File]::Delete($tmpfile)
-        }
+        $contentSvg | & "$($svgTool.FullName)" $options
     } else {
         [System.Console]::WriteLine("File not found: '$svgfile'.")
     }
